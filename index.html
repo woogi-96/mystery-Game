@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>멍뭉의 꿈 미스터리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./js/lib/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <!-- 오버레이들 -->
+  <div id="vignette"></div>
+  <div id="fade"></div>
+  <div id="dreamfx"><div class="swirl"></div><div class="swirl s2"></div></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-left">
+      <div id="epLabel"></div>
+      <div id="stageDots"></div>
+      <div id="hearts"></div>
+    </div>
+    <div class="hud-right">
+      <div id="clockHud" class="hidden">
+        <span id="clockTime">18:30</span>
+        <span id="clockSpeed"></span>
+      </div>
+      <button id="muteBtn" title="소리 켜기/끄기">🔊</button>
+    </div>
+  </div>
+
+  <div id="caption"></div>
+  <div id="card"><div class="card-no"></div><div class="card-title"></div><div class="card-sub"></div></div>
+
+  <!-- 대화 -->
+  <div id="dialog" class="hidden">
+    <div id="dlgName"></div>
+    <div id="dlgText"></div>
+    <div id="dlgNext">▼</div>
+  </div>
+  <div id="choices" class="hidden"></div>
+
+  <!-- 퀴즈 -->
+  <div id="quiz" class="hidden">
+    <div class="q-head">
+      <span id="qLevel" class="lvl"></span>
+      <span id="qTitle"></span>
+      <button id="qToggle" title="장면 크게 보기">장면 보기 ▾</button>
+    </div>
+    <div class="q-body">
+      <p id="qSituation"></p>
+      <div class="q-sub">🔎 단서 <small>(누르면 장면 속 단서를 비춰요)</small></div>
+      <div id="qClues"></div>
+      <div id="qQuestion"></div>
+      <div id="qOptions"></div>
+    </div>
+  </div>
+
+  <div id="feedback" class="hidden">
+    <div class="fb-box">
+      <div id="fbIcon"></div>
+      <div id="fbTitle"></div>
+      <div id="fbChain"></div>
+      <p id="fbText"></p>
+      <button id="fbBtn">계속</button>
+    </div>
+  </div>
+
+  <!-- 타이틀 -->
+  <div id="title">
+    <div class="t-inner">
+      <div class="t-small">3D 꿈 추리 어드벤처</div>
+      <h1>멍뭉의<br /><span>꿈 미스터리</span></h1>
+      <p class="t-desc">퇴근하고 지친 멍뭉이의 기묘한 밤.<br />꿈속 다섯 개의 사건을 추리로 풀어내고, 우기를 만나러 가자!</p>
+      <div class="t-diff"><span class="lvl l1">중간</span><span class="lvl l2">어려움</span><span class="lvl l3">초어려움</span></div>
+      <button id="startBtn">꿈꾸러 가기 ▶</button>
+      <p class="t-tip">에피소드마다 하트 3개 · 하트를 모두 잃으면 꿈에 갇혀요</p>
+      <div id="loading">로딩 중…</div>
+    </div>
+  </div>
+
+  <div id="ending" class="hidden">
+    <div class="end-box">
+      <div id="endTitle"></div>
+      <div id="endText"></div>
+      <div id="endBtns"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
