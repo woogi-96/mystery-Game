@@ -81,7 +81,7 @@ export function build(env) {
       wide: shot([0, 6, 22], [0, 1.5, 0], 50),
       meet: shot([4.5, 2.8, 8.5], [0, 1.4, 3.0], 46),
       couple: shot([0.5, 2.2, 7.2], [0, 1.5, 3.0], 40),
-      away: shot([0, 9, 26], [0, 1.5, 6], 52),
+      away: shot([3, 7, 14], [-2.5, 1.5, 1], 50),
     },
     focus: {},
     startShot() { return sc.shots.wide; },
@@ -165,8 +165,9 @@ export function build(env) {
       await say(woogi, '우기', '꺄 ㅎㅎ 빨리 가자! 카페 예약했단 말이야~');
       woogi.setPose('idle'); mung.setPose('idle');
       env.cameraTo(sc.shots.away, 4);
-      walkTo(woogi, -5.2, -2.0, 1.8);
-      await walkTo(mung, -6.0, -1.0, 1.8);
+      walkTo(woogi, -2.8, 3.2, 1.6);
+      await walkTo(mung, -3.6, 4.0, 1.6);
+      woogi.setPose('wave'); mung.setPose('wave');
       const mins = Math.round((performance.now() - env.state.startTime) / 60000);
       const res = await ui.ending('💗 HAPPY END 💗', `알고 보니 다 꿈이었다!<br>멍뭉이는 우기와 데이트를 떠났습니다.<br><br><small>꿈속 퀴즈 15문제 클리어 · 오답 ${env.state.wrongTotal}회 · 플레이 약 ${mins}분</small>`, [{ label: '처음부터 다시 꿈꾸기' }]);
       heartOn = false; hearts.forEach(h => (h.visible = false));
