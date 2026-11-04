@@ -189,7 +189,7 @@ export function build(env) {
       g.fillStyle = '#ffe2cc'; g.beginPath(); g.arc(x, 100, 34, 0, 7); g.fill();
       g.fillStyle = '#3a2216'; g.beginPath(); g.arc(x - 12, 100, 5, 0, 7); g.arc(x + 12, 100, 5, 0, 7); g.fill();
       g.fillStyle = '#ff9eb5'; g.beginPath(); g.arc(x - 20, 112, 6, 0, 7); g.arc(x + 20, 112, 6, 0, 7); g.fill();
-      if (hat) { g.fillStyle = '#d4f0e2'; g.beginPath(); g.ellipse(x, 62, 46, 18, -0.15, 0, 7); g.fill(); }
+      if (hat) { g.fillStyle = hair; g.fillRect(x - 34, 70, 68, 16); g.fillRect(x - 44, 90, 12, 70); g.fillRect(x + 32, 90, 12, 70); }
       else { g.fillStyle = hair; g.beginPath(); g.arc(x + 4, 46, 14, 0, 7); g.fill(); }
     };
     face(95, '#1c1a1f', true); face(185, '#6b3c1f', false);

@@ -208,7 +208,7 @@ export function build(env) {
         mung.setExpr('happy');
         await narr('세상에서 제일 소중한 사람이 있다.');
         await step(env.cameraTo(shots.twoClose, 1.4));
-        ui.nameTag('우기', '민트 베레모 · 긴 웨이브 머리 · 회색 집업', 'woogi');
+        ui.nameTag('우기', '일자 앞머리 · 검정 긴 생머리 · 회색 집업', 'woogi');
         woogi.setPose('cheeks'); woogi.setExpr('happyWink');
         mung.setPose('chin'); mung.setExpr('happy');
         bigHeart.visible = true; bigHeart.position.set(0, 3.25, 0);

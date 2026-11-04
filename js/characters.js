@@ -684,7 +684,7 @@ function makeHero(kind) {
   const faceTex = new FaceTex(skull, o);
   let strands = null;
   if (isMung) hairMungmung(head);
-  else { for (const s of [-1, 1]) sph(0.09, SKIN, { pos: [s * 0.55, -0.05, 0], scale: [0.5, 1, 0.8], parent: head }); strands = hairWoogi(head); beret(head); }
+  else { for (const s of [-1, 1]) sph(0.09, SKIN, { pos: [s * 0.55, -0.05, 0], scale: [0.5, 1, 0.8], parent: head }); strands = hairWoogi(head); }
   const phone = rbox(0.12, 0.22, 0.025, 0.02, '#2b2d36', { parent: arms[1].userData.hand, pos: [0, -0.06, 0.08] });
   const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.19), new THREE.MeshBasicMaterial({ color: 0x9fd8ff }));
   scr.position.z = 0.014; phone.add(scr);
