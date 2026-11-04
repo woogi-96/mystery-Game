@@ -206,7 +206,7 @@ export function build(env) {
         await step(anim(0.6, k => woogi.root.scale.setScalar(Math.max(0.01, k)), ease.back || ease.out));
         await anim(0.4, k => (mung.root.rotation.y = -0.15 - k * 0.4));
         mung.setExpr('happy');
-        await narr('매일 퇴근길에 통화하는 사람이 있다.');
+        await step(wait(0.4));
         await step(env.cameraTo(shots.twoClose, 1.4));
         ui.nameTag('우기', '일자 앞머리 · 검정 긴 생머리 · 회색 집업', 'woogi');
         woogi.setPose('cheeks'); woogi.setExpr('happyWink');
@@ -214,7 +214,7 @@ export function build(env) {
         bigHeart.visible = true; bigHeart.position.set(0, 3.25, 0);
         anim(0.5, k => bigHeart.scale.setScalar(Math.max(0.01, k)), ease.out);
         sfx.heart();
-        await narr('우기.', 1.6);
+        await narr('우기가 있다.', 2.0);
         heartsOn = true;
         env.cameraTo(shots.two, 2.4);
         await narr('평범하지만 반짝이는, 두 사람의 하루하루.', 2.8);
