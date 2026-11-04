@@ -155,12 +155,40 @@ export function build(env) {
       woogi.setPose('wave'); woogi.setExpr('happy');
       await turnTo(woogi, -0.7, 0.4);
       await say(woogi, '우기', '멍뭉아! 여기야 여기~!');
-      await say(mung, '멍뭉', '우기야! 나 어젯밤에 엄청난 꿈 꿨어. 퀴즈를 열다섯 개나 풀었다니까?');
-      woogi.setPose('cheeks');
-      await say(woogi, '우기', '헤헤, 꿈에서도 열심히 사는구나 우리 멍뭉이~ 그럼 오늘은 아무 생각 말고 놀자!');
+      // 꿈 이야기 옹알옹알
+      const f = env.state.flags || {};
+      const topic = id => { const t = env.getQuiz(id).title; return t.includes('·') ? t.split('·').pop().trim() : t; };
+      const babble = (text) => say(mung, '멍뭉', text, { speed: 16 });
+      const wsay = (text) => say(woogi, '우기', text);
+      await env.cameraTo(sc.shots.couple, 1.4);
+      mung.setPose('cheer'); mung.setExpr('happy');
+      await babble('우기야 우기야! 나 어젯밤에 진짜 이상한 꿈 꿨어! 들어 봐 들어 봐!');
+      woogi.setPose('idle'); woogi.setExpr('happy');
+      await wsay('응응, 무슨 꿈인데? ㅎㅎ');
+      mung.setPose('wave');
+      await babble((f.attend === 1 ? '처음엔 대학교였는데, 교수님이 출석 부를 때 자는 척하다가 딱 걸렸어…' : '처음엔 대학교였는데, 교수님이 출석 부르길래 "네!!" 했더니 목소리가 다 잠겨서 다들 웃고…')
+        + ` 수업에선 「${topic('school1')}」 문제도 풀었다?`);
+      await babble(f.snack === 0 ? '동아리방에선 서준이가 민트초코 떡볶이를 줬는데… 이상하게 맛있었어!! 넌센스 퀴즈 대회도 내가 우승!' : '동아리방에선 서준이가 민트초코 떡볶이를 주길래 겨우 피했지 ㅋㅋ 넌센스 퀴즈 대회는 내가 우승!');
+      await wsay('ㅋㅋㅋ 민트초코 떡볶이는 뭐야~');
+      mung.setPose('think');
+      await babble((f.light === 1 ? '그다음엔 공원 동굴에 갇혔는데 손전등도 안 켜고 들어갔다가 돌부리에 쿵!' : '그다음엔 공원 동굴에 갇혔는데, 손전등 켜고 들어가서 관리인 아저씨한테 칭찬받았다?')
+        + ' 수수께끼 풀어서 탈출했어!');
+      mung.setPose('panic');
+      await babble((f.mail === 0 ? '회사에선 야근하다 정전이 났는데, 메일부터 보내려다 팀장님한테 혼나고…' : '회사에선 야근하다 정전이 났는데, 내가 "다들 계단으로!" 외쳤다?')
+        + ' 폰부스에 혼자 남은 박사원님도 내가 찾았어!');
+      woogi.setExpr('surprised');
+      await wsay('헐 대박, 우리 멍뭉이 영웅이네?');
+      mung.setPose('point');
+      await babble('버스에선 기사님이 쓰러지셔서 내가 버스를 세웠어!' + (f.msg === 0 ? ' 너한테 문자 보냈더니 아이스크림 사 온다 그랬고 ㅋㅋ' : '') + ' 근데 너도 나왔다? 아파트 앞에서 손 흔들어 줬어!');
+      woogi.setExpr('happy');
+      await wsay('꿈에서도 나 보러 왔구나~ 헤헤');
+      mung.setPose('think');
+      await babble((f.night === 1 ? '집에 와서 게임 한 판만 한다는 게 새벽 2시가 됐는데,' : '집에 와서 자는데 새벽 2시에 깼거든?') + ' 옆집 사람이 간첩인 줄 알았는데… 알고 보니 게임 성우였어!!');
+      await babble(`그리고 돌발 퀴즈도 ${env.state.popTotal}개 중에 ${env.state.popRight}개 맞혔다? 헥헥…`);
+      woogi.setPose('cheeks'); woogi.setExpr('happyWink');
+      await wsay('ㅋㅋㅋ 숨 좀 쉬고 말해~ 꿈에서도 열심히 살았네, 우리 멍뭉이. 그럼 오늘은 아무 생각 말고 놀자!');
       mung.setPose('cheeks'); mung.setExpr('happy');
       heartOn = true; sfx.heart();
-      await env.cameraTo(sc.shots.couple, 1.6);
       await say(mung, '멍뭉', '응! …근데 우기야, 오늘 왜케 이뻐?');
       await say(woogi, '우기', '꺄 ㅎㅎ 빨리 가자! 카페 예약했단 말이야~');
       woogi.setPose('idle'); mung.setPose('idle');
@@ -169,7 +197,9 @@ export function build(env) {
       await walkTo(mung, -3.6, 4.0, 1.6);
       woogi.setPose('wave'); mung.setPose('wave');
       const mins = Math.round((performance.now() - env.state.startTime) / 60000);
-      const res = await ui.ending('💗 HAPPY END 💗', `알고 보니 다 꿈이었다!<br>멍뭉이는 우기와 데이트를 떠났습니다.<br><br><small>꿈속 퀴즈 15문제 클리어 · 오답 ${env.state.wrongTotal}회 · 돌발 퀴즈 ${env.state.popRight}/${env.state.popTotal} · 플레이 약 ${mins}분</small>`, [{ label: '처음부터 다시 꿈꾸기' }]);
+      const R = env.ROUNDS, cur = env.state.round, next = (cur + 1) % R;
+      const nextMsg = next === 0 ? `${R}개의 꿈을 모두 꿨어요! 다음엔 첫 번째 꿈부터 다시 시작해요.` : `다음엔 ${next + 1}번째 꿈 · 새로운 문제가 나와요!`;
+      const res = await ui.ending('💗 HAPPY END 💗', `알고 보니 다 꿈이었다!<br>멍뭉이는 우기와 데이트를 떠났습니다.<br><br><small>${cur + 1}번째 꿈 클리어 · 퀴즈 15문제 · 오답 ${env.state.wrongTotal}회 · 돌발 퀴즈 ${env.state.popRight}/${env.state.popTotal} · 플레이 약 ${mins}분<br>🌙 ${nextMsg}</small>`, [{ label: '다음 꿈 꾸기' }]);
       heartOn = false; hearts.forEach(h => (h.visible = false));
       return res;
     },

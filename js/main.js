@@ -3,6 +3,7 @@ import { makeMungmung, makeWoogi } from './characters.js';
 import { ui } from './ui.js';
 import { sfx } from './audio.js';
 import { QUIZ, EPISODES } from './quizzes.js';
+import { VARIANTS, POPS } from './variants.js';
 import * as Room from './scenes/room.js';
 import * as School from './scenes/school.js';
 import * as Park from './scenes/park.js';
@@ -85,6 +86,45 @@ function setScene(s) {
 }
 
 const state = { hearts: 3, ep: 0, quizIndex: 0, wrongTotal: 0, popRight: 0, popTotal: 0, path: null, startTime: 0, flags: {} };
+/* ───────── 판(round): 끝까지 깨면 다음 판은 새 문제 (0~14, 15판), 중간에 실패하면 같은 판 유지 ───────── */
+const ROUNDS = 15;
+function loadRound() { try { const v = parseInt(localStorage.getItem('mungmung_round'), 10); return v >= 0 && v < ROUNDS ? v : 0; } catch (e) { return 0; } }
+function saveRound(v) { try { localStorage.setItem('mungmung_round', String(v)); } catch (e) { /* 저장 안 되면 이번 세션에서만 유지 */ } }
+state.round = loadRound();
+const forced = new URLSearchParams(location.search).get('round');
+if (forced != null) state.round = Math.max(0, Math.min(ROUNDS - 1, +forced || 0));
+// 같은 판이면 항상 같은 순서가 되도록 판 번호로 보기를 섞는다
+function seeded(seed) { let x = seed >>> 0 || 1; return () => ((x = (x * 1103515245 + 12345) >>> 0) / 4294967296); }
+function shuffleQ(q, seed) {
+  const r = seeded(seed);
+  const idx = q.options.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return { ...q, options: idx.map(i => q.options[i]), answer: idx.indexOf(q.answer) };
+}
+const hash = str => [...str].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+function getQuiz(id) {
+  const base = QUIZ[id];
+  if (!state.round) return base;
+  const v = VARIANTS[id][state.round - 1];
+  const q = { ...base, ...v, chain: v.chain || [], lines: v.lines || base.lines, clues: v.lines ? v.lines.map(([n, t]) => ({ text: `${n}: ${t}` })) : base.clues };
+  return shuffleQ(q, hash(id) + state.round * 7919);
+}
+const POP_INTRO = {
+  school: '자, 분위기 탄 김에 돌발 퀴즈! 10초 안에 대답해요~',
+  club: '잠깐! 보너스 넌센스 하나 더! 빨리 대답해!',
+  cave: '가만, 쉬어 가는 김에 하나 물어보세. 빨리 대답해 보게!',
+  office: '아 맞다, 멍뭉님! 돌발 퀴즈로 하나만 물어볼게요!',
+  bus: null,
+  apt: '아 참, 학생! 분리수거 문제 하나 내 보겠네. 빨리!',
+};
+function getPop(key, p) {
+  if (!state.round) return p;
+  const v = POPS[key][state.round - 1];
+  const lines = v.lines || (POP_INTRO[key] ? [[p.asker, POP_INTRO[key]]] : []);
+  return shuffleQ({ ...p, ...v, lines }, hash(key) + state.round * 104729);
+}
+function advanceRound() { state.round = (state.round + 1) % ROUNDS; saveRound(state.round); }
+
 const who = name => (name === '멍뭉' ? mung : (current && current.cast && current.cast[name]) || null);
 
 const env = {
@@ -99,7 +139,7 @@ const env = {
   /* 퀴즈 실행: 하트 관리 + 단서 포커스 */
   /* 대화형 퀴즈: 인물들이 대화로 단서를 주고 → 질문 → 선택지 팝업 → 반응 */
   async quiz(id) {
-    const q = QUIZ[id];
+    const q = getQuiz(id);
     const ep = EPISODES[state.ep];
     ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id), 3);
     const before = { pos: camBase.pos.clone(), look: camBase.look.clone(), fov: camBase.fov };
@@ -163,7 +203,11 @@ const env = {
   },
 
   /* 돌발 퀴즈: 장면과 관련된 짧은 문제, 제한 시간 안에! (하트는 깎이지 않음) */
-  async popQuiz(p) {
+  getQuiz,
+  ROUNDS,
+  get alt() { return state.round > 0; },
+  async popQuiz(key, p0) {
+    const p = getPop(key, p0);
     const say = (name, text) => { const ch = who(name); return ui.say(name, text, { onTalk: () => { if (ch) ch.talk = Math.min(3.5, text.length * 0.06); } }); };
     sfx.ring();
     ui.toast('⚡ 돌발 퀴즈!', '#ffcc4d');
@@ -318,12 +362,19 @@ async function runGame(fromEp = null) {
   const end = getScene(Ending, 'ending');
   if (result.clear) {
     const choice = await end.happy(env, getScene(Room, 'room'));
+    advanceRound();
+    updateRoundBadge();
     if (choice === 0) return runGame(null);
   } else {
     const choice = await end.trapped(env, getScene(Room, 'room'), result.fail);
     if (choice === 0) return runGame(result.fail);
     return runGame(null);
   }
+}
+
+function updateRoundBadge() {
+  const el = document.getElementById('roundBadge');
+  if (el) el.textContent = `🌙 ${state.round + 1}번째 꿈 / ${ROUNDS} · 끝까지 깨면 다음 꿈은 새로운 문제!`;
 }
 
 /* ───────── 시작 ───────── */
@@ -334,6 +385,7 @@ async function boot() {
   setScene(room);
   cameraSet(room.shots.title);
   document.getElementById('loading').textContent = '';
+  updateRoundBadge();
   const btn = document.getElementById('startBtn');
   btn.disabled = false;
   btn.onclick = async () => {

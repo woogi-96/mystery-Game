@@ -454,10 +454,10 @@ export function build(env) {
       walkTo(ranger, -0.6, 1.6, 2, Math.PI);
       mung.setPose('idle'); mung.setExpr('open');
       await walkTo(mung, -2.6, 2.2, 2, Math.PI - 0.4);
-      await say(mung, '멍뭉', '길은 세 갈래네요. 바위 위에 촛불 하나가 켜져 있어요.');
+      await say(mung, '멍뭉', env.alt ? '길은 세 갈래인데… 바위에 수수께끼가 새겨져 있어요! 풀어야 길이 열리나 봐요.' : '길은 세 갈래네요. 바위 위에 촛불 하나가 켜져 있어요.');
       if (await env.quiz('cave1') === 'fail') return 'fail';
       mk.hide();
-      await env.popQuiz({
+      await env.popQuiz('cave', {
         asker: '관리인 아저씨', title: '돌발 퀴즈 · 동굴 상식',
         lines: [['관리인 아저씨', '가만, 천장 좀 보게. 고드름 같은 돌이 주렁주렁하구먼. 자네, 이거 이름 아나?']],
         question: '석회 동굴 천장에서 고드름처럼 아래로 자라는 돌은?',
@@ -469,7 +469,7 @@ export function build(env) {
 
       walkTo(ranger, 4.4, -6.2, 2.4);
       await walkTo(mung, 5.5, -6.8, 2.4);
-      await say(mung, '멍뭉', '햇빛 냄새가 나! 이쪽이 맞아!');
+      await say(mung, '멍뭉', env.alt ? '정답을 말하자 오른쪽 통로에서 바람이 불어와요! 이쪽이에요!' : '햇빛 냄새가 나! 이쪽이 맞아!');
       walkTo(mung, 5.5, -10, 2.4);
       await env.cut(async () => {
         place(cave, mung, [0, 0, Z2 + 5], Math.PI, 'idle');
@@ -477,23 +477,25 @@ export function build(env) {
         env.cameraSet(shots.c2);
       });
       flooding = 1; sfx.water();
-      await say(mung, '멍뭉', '…또 막혔어요. 석문에 "4"가 새겨져 있어요!');
+      await say(mung, '멍뭉', env.alt ? '…또 막혔어요. 석문에 문제가 새겨져 있어요!' : '…또 막혔어요. 석문에 "4"가 새겨져 있어요!');
       if (await env.quiz('cave2') === 'fail') return 'fail';
       mk.hide();
 
-      // 물 붓기 연출
-      await walkTo(mung, -1.6, Z2 - 0.2, 2.6);
-      jar5.w.visible = true;
-      const steps = [[1, 0], [0.4, 1], [0.4, 0], [0, 0.67], [1, 0.67], [0.8, 1]];
-      for (const [a, b] of steps) {
-        sfx.water();
-        await anim(0.4, k => { jar5.w.position.y = 0.05 + a * 1.0; jar3.w.visible = b > 0; jar3.w.position.y = 0.05 + b * 0.7; });
+      // 물 붓기 연출 (기본 문제일 때만)
+      if (!env.alt) {
+        await walkTo(mung, -1.6, Z2 - 0.2, 2.6);
+        jar5.w.visible = true;
+        const steps = [[1, 0], [0.4, 1], [0.4, 0], [0, 0.67], [1, 0.67], [0.8, 1]];
+        for (const [a, b] of steps) {
+          sfx.water();
+          await anim(0.4, k => { jar5.w.position.y = 0.05 + a * 1.0; jar3.w.visible = b > 0; jar3.w.position.y = 0.05 + b * 0.7; });
+        }
       }
       await walkTo(mung, 3.0, Z2 - 1.8, 2.4);
       sfx.door(); env.shake(0.3);
       flooding = 0;
       await anim(1.6, k => (door2.position.y = -5.2 * k));
-      await say(mung, '멍뭉', '열렸다! (5L에서 딱 1L만 덜어내는 게 핵심이었어…)');
+      await say(mung, '멍뭉', env.alt ? '열렸다! 정답을 맞히니까 석문이 스르륵 내려가요!' : '열렸다! (5L에서 딱 1L만 덜어내는 게 핵심이었어…)');
       walkTo(mung, 3.6, Z2 - 9, 2.4);
       await env.cut(async () => {
         place(cave, mung, [0, 0, Z3 + 6], Math.PI, 'idle');

@@ -102,6 +102,23 @@ export function build(env) {
       g.fillStyle = '#ffe9a6'; g.font = `34px ${FONT}`; g.fillText('효율 ↑  →  ???  →  소비 ↑', 745, 250);
     });
   }
+  /* 다른 판: 문제 제목 + 교수님 설명으로 슬라이드를 만든다 */
+  function boardQuiz(q) {
+    drawBoard((g) => {
+      g.fillStyle = '#ffffff'; g.font = `50px ${FONT}`; g.fillText('🌏 ' + q.title, 50, 80);
+      g.font = `30px ${FONT2}`;
+      let y = 150;
+      (q.lines || []).filter(l => l[0] === '교수님').slice(0, 3).forEach(([, t]) => {
+        let line = '';
+        for (const ch of '• ' + t) {
+          if (g.measureText(line + ch).width > 1080) { g.fillText(line, 60, y); y += 42; line = '  '; }
+          line += ch;
+        }
+        g.fillText(line, 60, y); y += 54;
+      });
+      g.fillStyle = '#ffb6c8'; g.font = `34px ${FONT}`; g.fillText('Q. ' + (q.ask || '').slice(0, 34), 60, 372);
+    });
+  }
   boardBio();
 
   // 강연대 + 교수님
@@ -335,7 +352,7 @@ export function build(env) {
     cast: { '교수님': teacher, '옆자리 친구': students[3] || students[0], '하린': harin, '도윤': doyun, '서준': seojun, '지우': jiwoo },
     startShot: () => shots.seat,
     reset() {
-      boardBio(); drawGit(false);
+      if (env.alt) boardQuiz(env.getQuiz('school1')); else boardBio(); drawGit(false);
       place(scene, mung, [1.5, 0.68, 1.35], Math.PI, 'slump', 'closed');
       teacher.root.position.set(3.0, 0, -5.0); teacher.setPose('idle');
       [harin, doyun].forEach(c => { c.setPose('angry'); c.setExpr('open'); });
@@ -384,7 +401,7 @@ export function build(env) {
         await say(mung, '멍뭉', '(으앙… 근데 여기 대학교 강의실이잖아? 분명 방에서 자고 있었는데…)');
       }
       mung.setExpr('open');
-      await say(friend, '옆자리 친구', '(속닥) 오늘 환경사회학 진도 나가는 날이야. 공유지 어쩌구~');
+      await say(friend, '옆자리 친구', env.alt ? '(속닥) 오늘 환경 수업이야. 교수님이 질문 엄청 하신대~' : '(속닥) 오늘 환경사회학 진도 나가는 날이야. 공유지 어쩌구~');
       await env.cameraTo(shots.boardView, 1.6);
       T.setPose('point');
       if (await env.quiz('school1') === 'fail') return 'fail';
@@ -393,7 +410,7 @@ export function build(env) {
       // 돌발 퀴즈
       await env.cameraTo(shots.seat, 1.2);
       T.setPose('cheer');
-      await env.popQuiz({
+      await env.popQuiz('school', {
         asker: '교수님', title: '돌발 퀴즈 · 환경 용어',
         lines: [['교수님', '좋아요! 그럼 분위기 탄 김에 돌발 퀴즈! 10초 안에 대답해요~']],
         question: '배출한 온실가스만큼 흡수하거나 줄여서, 실질 배출량을 "0"으로 만드는 것을 뭐라고 하죠?',
@@ -403,13 +420,17 @@ export function build(env) {
         wrong: '정답은 "탄소중립"! 탄소발자국은 내가 배출한 양을 재는 거고요~',
       });
       T.setPose('idle');
-      await env.cut(async () => { boardMath(); env.cameraSet(shots.boardView); });
-      await ui.caption('♻️ 11시 · 환경경제학', 1.4);
-      await say(T, '교수님', '이번 건 꽤 많은 학생이 틀려요. "좋은 일 = 좋은 결과"라고 단정하지 마세요.');
-      students.slice(0, 4).forEach(s => s.setPose('cheer'));
-      emote(scene, students[1], '연비 짱!', 2);
-      await say(null, '학생들', '연비가 좋아졌으면 당연히 기름을 덜 쓰는 거 아니에요?');
-      students.forEach(s => s.setPose('sitChair'));
+      await env.cut(async () => { if (env.alt) boardQuiz(env.getQuiz('school2')); else boardMath(); env.cameraSet(shots.boardView); });
+      await ui.caption(env.alt ? '♻️ 11시 · 환경 수업 2교시' : '♻️ 11시 · 환경경제학', 1.4);
+      if (env.alt) {
+        await say(T, '교수님', '이번 문제도 직관만 믿으면 틀리기 쉬워요. 이야기를 끝까지 들어 보세요.');
+      } else {
+        await say(T, '교수님', '이번 건 꽤 많은 학생이 틀려요. "좋은 일 = 좋은 결과"라고 단정하지 마세요.');
+        students.slice(0, 4).forEach(s => s.setPose('cheer'));
+        emote(scene, students[1], '연비 짱!', 2);
+        await say(null, '학생들', '연비가 좋아졌으면 당연히 기름을 덜 쓰는 거 아니에요?');
+        students.forEach(s => s.setPose('sitChair'));
+      }
       if (await env.quiz('school2') === 'fail') return 'fail';
 
       await say(T, '교수님', '오늘 강의는 여기까지! 동아리 축제 준비하는 학생들은 힘내요~');
@@ -449,7 +470,7 @@ export function build(env) {
 
       // 돌발 넌센스
       mung.setPose('idle');
-      await env.popQuiz({
+      await env.popQuiz('club', {
         asker: '지우', title: '돌발 넌센스 · 개발자 편',
         lines: [['지우', '잠깐! 보너스 문제 하나 더! 우리 동아리 맞춤형이야. 빨리 대답해!']],
         question: '개발자가 세상에서 제일 싫어하는 벌레는?',

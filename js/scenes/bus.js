@@ -324,7 +324,7 @@ export function build(env) {
       }
       // 돌발 퀴즈
       await say(student, '대학생', '(중얼중얼) 아… 내일 운전면허 필기 시험인데… 저기요, 혹시 이거 아세요?');
-      await env.popQuiz({
+      await env.popQuiz('bus', {
         asker: '대학생', title: '돌발 퀴즈 · 교통 상식',
         question: '버스 전용차로를 표시하는 차선 색깔은 무슨 색일까요?',
         options: ['노란색', '흰색', '파란색', '빨간색'],

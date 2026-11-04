@@ -352,9 +352,9 @@ export function build(env) {
       }
       if (await env.quiz('office2') === 'fail') return 'fail';
       mk.hide();
-      await say(crew['박사원'], '박사원', '살았다! 폰부스 예약해 두고 모니터에 메모 붙여 놨어요. "21:30 폰부스 LA 화상회의"!');
+      await say(crew['박사원'], '박사원', env.alt ? '아, 저는 오늘 밤 9시 반에 LA 파트너랑 화상회의라 폰부스 예약해 뒀어요. 모니터에 "21:30 폰부스 LA 화상회의" 메모도 붙여 놨고요!' : '살았다! 폰부스 예약해 두고 모니터에 메모 붙여 놨어요. "21:30 폰부스 LA 화상회의"!');
       // 돌발 퀴즈
-      await env.popQuiz({
+      await env.popQuiz('office', {
         asker: '오선임', title: '돌발 퀴즈 · 회사 용어',
         lines: [['오선임', '아 맞다 정인턴, 아까 메일 보고 물어봤던 거! 멍뭉님, 돌발 퀴즈로 대신 대답해 주세요!']],
         question: '업무 메일에 자주 나오는 "ASAP"은 무슨 뜻일까?',

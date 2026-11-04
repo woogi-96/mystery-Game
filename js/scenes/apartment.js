@@ -224,7 +224,7 @@ export function build(env) {
       mung.setExpr('open');
       await walkTo(guard, 4.0, 1.1, 1.8, -Math.PI / 2);
       await say(guard, '경비 아저씨', '학생도 나왔구먼. 나도 분리수거장 정리하고 순찰 돌다가 저 집이 하도 수상해서 말이야.');
-      await env.popQuiz({
+      await env.popQuiz('apt', {
         asker: '경비 아저씨', title: '돌발 퀴즈 · 분리수거',
         lines: [['경비 아저씨', '아 참, 그 전에! 누가 또 기름 범벅 피자 박스를 종이류에 넣었더라고. 학생은 알지?']],
         question: '치즈랑 기름이 잔뜩 묻은 피자 박스는 어디에 버려야 할까요?',
