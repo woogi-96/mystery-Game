@@ -376,6 +376,8 @@ export function build(env) {
       exitLight.intensity = 0;
       door2.position.y = 0;
       doorSign.tex.redraw(drawDoorSign(env.alt ? '?' : '4'));
+      // 다른 판: 물항아리 문제 소품 대신 그 판의 3D 모형이 놓인다
+      jar3.g.visible = jar5.g.visible = scaleG.visible = !env.alt;
       scaleSign.tex.redraw(drawScaleSign(env.alt ? '= ?' : '= 4'));
     },
     onEnter() { sc.scene.add(mung.root); },

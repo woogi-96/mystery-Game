@@ -4,6 +4,8 @@ import { ui } from './ui.js';
 import { sfx } from './audio.js';
 import { QUIZ, EPISODES } from './quizzes.js';
 import { VARIANTS, POPS } from './variants.js';
+import { ART } from './art.js';
+import { getStage } from './stages.js';
 import * as Room from './scenes/room.js';
 import * as School from './scenes/school.js';
 import * as Park from './scenes/park.js';
@@ -87,7 +89,7 @@ function setScene(s) {
 
 const state = { hearts: 3, ep: 0, quizIndex: 0, wrongTotal: 0, popRight: 0, popTotal: 0, path: null, startTime: 0, flags: {} };
 /* ───────── 판(round): 끝까지 깨면 다음 판은 새 문제 (0~14, 15판), 중간에 실패하면 같은 판 유지 ───────── */
-const ROUNDS = 15;
+const ROUNDS = 3;
 function loadRound() { try { const v = parseInt(localStorage.getItem('mungmung_round'), 10); return v >= 0 && v < ROUNDS ? v : 0; } catch (e) { return 0; } }
 function saveRound(v) { try { localStorage.setItem('mungmung_round', String(v)); } catch (e) { /* 저장 안 되면 이번 세션에서만 유지 */ } }
 state.round = loadRound();
@@ -102,10 +104,28 @@ function shuffleQ(q, seed) {
   return { ...q, options: idx.map(i => q.options[i]), answer: idx.indexOf(q.answer) };
 }
 const hash = str => [...str].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+/* 판마다 쓸 문제 (variants.js 배열 안의 번호). 3D 모형이 잘 어울리는 문제로 골랐다 */
+const PICK = {
+  school1: [0, 10], school2: [5, 7], school3: [0, 4],
+  cave1: [0, 2], cave2: [0, 8], cave3: [0, 2],
+  office1: [4, 8], office2: [6, 4],
+};
+const pickIdx = id => (PICK[id] || [0, 1])[state.round - 1];
+/* 2·3번째 꿈: 문제마다 3D 모형(디오라마)이 장면에 놓이고, 대화 중 카메라가 그것을 비춘다 */
+const DIORAMA_IDS = ['school1', 'school2', 'school3', 'cave1', 'cave2', 'cave3', 'office1', 'office2'];
+function withArt(id, q) {
+  const art = ART[id] && ART[id][state.round ? pickIdx(id) + 1 : 0];
+  let lines = q.lines;
+  if (!state.round && id === 'school3' && lines) lines = lines.map(([n, t, f]) => [n, t, f || 'clubArt']);
+  return { ...q, art, lines, stage: state.round && DIORAMA_IDS.includes(id) ? `${id}_${state.round}` : null };
+}
 function getQuiz(id) {
+  return withArt(id, getQuizRaw(id));
+}
+function getQuizRaw(id) {
   const base = QUIZ[id];
   if (!state.round) return base;
-  const v = VARIANTS[id][state.round - 1];
+  const v = VARIANTS[id][pickIdx(id)];
   const q = { ...base, ...v, chain: v.chain || [], lines: v.lines || base.lines, clues: v.lines ? v.lines.map(([n, t]) => ({ text: `${n}: ${t}` })) : base.clues };
   return shuffleQ(q, hash(id) + state.round * 7919);
 }
@@ -132,6 +152,7 @@ const env = {
   cameraTo, cameraSet,
   _setScene: s => setScene(s),
   get camBase() { return camBase; },
+  get current() { return current; },
   setSway(v) { sway = v; },
   shake(a = 0.3) { shake = Math.max(shake, a); },
   state,
@@ -140,56 +161,10 @@ const env = {
   /* 대화형 퀴즈: 인물들이 대화로 단서를 주고 → 질문 → 선택지 팝업 → 반응 */
   async quiz(id) {
     const q = getQuiz(id);
-    const ep = EPISODES[state.ep];
-    ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id), 3);
-    const before = { pos: camBase.pos.clone(), look: camBase.look.clone(), fov: camBase.fov };
-    const say = (name, text) => { const ch = who(name); return ui.say(name, text, { onTalk: () => { if (ch) ch.talk = Math.min(3.5, text.length * 0.06); } }); };
-    const focus = name => {
-      const f = name && current.focus && current.focus[name];
-      if (f) cameraTo(f, 1.1);
-      if (current.marker) {
-        if (f && f.mark) current.marker.show(new THREE.Vector3(...f.mark), f.r || 0.5);
-        else current.marker.hide();
-      }
-    };
-    for (const [name, text, f] of q.lines || []) {
-      focus(f);
-      await say(name, text);
-    }
-    if (current.marker) current.marker.hide();
-    cameraTo(before, 1.0);
-    const asker = who(q.asker);
-    const wrongs = new Set();
-    for (;;) {
-      if (asker) asker.talk = 1.5;
-      const pick = await ui.ask(q.asker, q.ask || q.question, q, wrongs);
-      if (pick === q.answer) {
-        sfx.correct();
-        ui.toast('✔ 정답!', '#ffe08a');
-        mung.setExpr('happy');
-        await say(q.asker, q.explain);
-        if (q.chain && q.chain.length) await say(q.asker, '정리하면 → ' + q.chain.join(' → '));
-        mung.setExpr('open');
-        ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id) + 1, 3);
-        return 'ok';
-      }
-      sfx.wrong();
-      wrongs.add(pick);
-      state.hearts -= 1;
-      state.wrongTotal += 1;
-      ui.setHearts(state.hearts);
-      ui.shakeHearts();
-      env.shake(0.15);
-      ui.toast('💔 하트 -1', '#ff9eb5');
-      mung.setExpr('sad');
-      if (state.hearts <= 0) {
-        await say(q.asker, '음… 그건 아닌 것 같은데… 어라? 주변이 점점 어두워진다……');
-        mung.setExpr('open');
-        return 'fail';
-      }
-      await say(q.asker, '음, 그건 아닌 것 같아. ' + q.hint);
-      mung.setExpr('open');
-    }
+    const stage = await enterStage(id, q);
+    const res = await runQuiz(id, q, stage);
+    if (stage) await exitStage(stage);
+    return res;
   },
 
   /* 대화 속 선택: 누군가 말을 걸면 팝업으로 멍뭉의 반응을 고른다 (정답 없음, 이야기만 달라짐) */
@@ -264,6 +239,103 @@ const env = {
     await ui.fadeTo(color, 0, dur);
   },
 };
+
+
+/* 대화형 퀴즈 본문: 인물들이 대화로 단서를 주고 → 질문 → 선택지 팝업 → 반응 */
+async function runQuiz(id, q, stage) {
+    const ep = EPISODES[state.ep];
+    if (current.showArt) current.showArt(id, q);
+    ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id), 3);
+    const before = stage ? stage.st.shots.main : { pos: camBase.pos.clone(), look: camBase.look.clone(), fov: camBase.fov };
+
+    const say = (name, text) => { const ch = who(name); return ui.say(name, text, { onTalk: () => { if (ch) ch.talk = Math.min(3.5, text.length * 0.06); } }); };
+    const focus = name => {
+      const f = name && current.focus && current.focus[name];
+      if (f) cameraTo(f, 1.1);
+      if (current.marker) {
+        if (f && f.mark) current.marker.show(new THREE.Vector3(...f.mark), f.r || 0.5);
+        else current.marker.hide();
+      }
+    };
+    (q.lines || []).forEach((l, i) => { if (stage) l[2] = i % 2 === 0 ? 'prop' : 'main'; });
+    for (const [name, text, f] of q.lines || []) {
+      focus(f);
+      await say(name, text);
+    }
+    if (current.marker) current.marker.hide();
+    cameraTo(before, 1.0);
+    const asker = who(q.asker);
+    const wrongs = new Set();
+    for (;;) {
+      if (asker) asker.talk = 1.5;
+      const pick = await ui.ask(q.asker, q.ask || q.question, q, wrongs);
+      if (pick === q.answer) {
+        sfx.correct();
+        ui.toast('✔ 정답!', '#ffe08a');
+        mung.setExpr('happy');
+        await say(q.asker, q.explain);
+        if (q.chain && q.chain.length) await say(q.asker, '정리하면 → ' + q.chain.join(' → '));
+        mung.setExpr('open');
+        ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id) + 1, 3);
+        return 'ok';
+      }
+      sfx.wrong();
+      wrongs.add(pick);
+      state.hearts -= 1;
+      state.wrongTotal += 1;
+      ui.setHearts(state.hearts);
+      ui.shakeHearts();
+      env.shake(0.15);
+      ui.toast('💔 하트 -1', '#ff9eb5');
+      mung.setExpr('sad');
+      if (state.hearts <= 0) {
+        await say(q.asker, '음… 그건 아닌 것 같은데… 어라? 주변이 점점 어두워진다……');
+        mung.setExpr('open');
+        return 'fail';
+      }
+      await say(q.asker, '음, 그건 아닌 것 같아. ' + q.hint);
+      mung.setExpr('open');
+    }
+  }
+
+/* 2·3번째 꿈: 문제마다 만든 3D 장소로 이동했다가, 끝나면 원래 장면으로 돌아온다 */
+async function enterStage(id, q) {
+  const st = q.stage && getStage(q.stage);
+  if (!st) return null;
+  const prev = current;
+  const names = [...new Set([q.asker, ...(q.lines || []).map(l => l[0])])].filter(n => n && n !== '멍뭉');
+  const chars = names.map(n => prev.cast && prev.cast[n]).filter(Boolean);
+  const all = [mung, ...chars];
+  const saved = all.map(ch => ({ ch, parent: ch.root.parent, pos: ch.root.position.clone(), rot: ch.root.rotation.clone(), pose: ch.pose, vis: ch.root.visible }));
+  const camSave = { pos: camBase.pos.clone(), look: camBase.look.clone(), fov: camBase.fov };
+  await ui.fadeTo('#fff', 1, 0.6);
+  const spots = st.spots(all.length);
+  all.forEach((ch, i) => {
+    st.scene.add(ch.root);
+    ch.root.visible = true;
+    ch.root.position.set(...spots[i].pos);
+    ch.root.rotation.set(0, spots[i].rot, 0);
+    ch.walking = 0;
+    ch.setPose('idle');
+  });
+  current = { scene: st.scene, focus: { prop: st.shots.prop, main: st.shots.main }, cast: prev.cast, actors: prev.actors, update: (dt, t) => st.update && st.update(t), showArt: prev.showArt ? (i, qq) => prev.showArt(i, qq) : null };
+  cameraSet(st.shots.main);
+  await ui.fadeTo('#fff', 0, 0.6);
+  await ui.caption('📍 ' + q.title, 1.4);
+  return { st, prev, saved, camSave };
+}
+async function exitStage(ctx) {
+  await ui.fadeTo('#fff', 1, 0.5);
+  ctx.saved.forEach(s => {
+    if (s.parent) s.parent.add(s.ch.root);
+    s.ch.root.position.copy(s.pos); s.ch.root.rotation.copy(s.rot);
+    s.ch.root.visible = s.vis; s.ch.walking = 0;
+    if (s.pose) s.ch.setPose(s.pose);
+  });
+  current = ctx.prev;
+  cameraSet(ctx.camSave);
+  await ui.fadeTo('#fff', 0, 0.5);
+}
 
 /* ───────── 루프 ───────── */
 let last = performance.now();

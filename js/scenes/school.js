@@ -1,5 +1,6 @@
 import { THREE, box, rbox, cyl, sph, plane, group, mat, emissive, texPlane, canvasTex, woodTex, tileTex, textSprite, anim, wait, ease, shot, FONT, FONT2, wrapText, roundRect, skyDome, tree, cone, capsule } from '../util.js';
 import { npc } from '../characters.js';
+import { drawArt } from '../art.js';
 import { place, talker, walkTo, turnTo, emote, chair, desk, marker, dreamy } from './common.js';
 
 /*
@@ -106,15 +107,17 @@ export function build(env) {
   function boardQuiz(q) {
     drawBoard((g) => {
       g.fillStyle = '#ffffff'; g.font = `50px ${FONT}`; g.fillText('🌏 ' + q.title, 50, 80);
-      g.font = `30px ${FONT2}`;
+      // 오른쪽: 이번 문제 상황 그림
+      if (q.art) { drawArt(g, 790, 110, 370, 230, q.art, { top: '#9fc8ff', bottom: '#e8f4ff' }); g.strokeStyle = '#fff'; g.lineWidth = 4; g.strokeRect(790, 110, 370, 230); }
+      g.fillStyle = '#ffffff'; g.font = `28px ${FONT2}`;
       let y = 150;
       (q.lines || []).filter(l => l[0] === '교수님').slice(0, 3).forEach(([, t]) => {
         let line = '';
         for (const ch of '• ' + t) {
-          if (g.measureText(line + ch).width > 1080) { g.fillText(line, 60, y); y += 42; line = '  '; }
+          if (g.measureText(line + ch).width > (q.art ? 700 : 1080)) { g.fillText(line, 60, y); y += 38; line = '  '; if (y > 340) break; }
           line += ch;
         }
-        g.fillText(line, 60, y); y += 54;
+        if (y <= 340) { g.fillText(line, 60, y); y += 48; }
       });
       g.fillStyle = '#ffb6c8'; g.font = `34px ${FONT}`; g.fillText('Q. ' + (q.ask || '').slice(0, 34), 60, 372);
     });
@@ -237,6 +240,19 @@ export function build(env) {
     ['✔ 캐릭터 애니메이션 (하린)', '✔ 사운드 (서준)', '✔ 랭킹 서버 (도윤)', '△ 버그 수정 3줄 (지우)', '빌드: v1.0  (커밋 128개)'].forEach((t, i) => g.fillText(t, 40, 130 + i * 44));
   }, { pos: [-1.5, 2.6, -4.83], parent: club });
   box(5.2, 2.6, 0.05, '#c7ccd6', { pos: [-1.5, 2.6, -4.86], parent: club });
+  /* 넌센스 문제마다 화이트보드 그림이 바뀐다 */
+  function drawClubBoard(q) {
+    wb.tex.redraw((g, w, h) => {
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#e0457b'; g.font = `50px ${FONT}`; g.fillText('🏆 넌센스 퀴즈 대회', 30, 64);
+      g.fillStyle = '#3a5ec2'; g.font = `30px ${FONT2}`;
+      const ask = (q.ask || '').replace(/^문제!\s*/, '');
+      g.fillText('Q. ' + ask.slice(0, 18), 30, 120);
+      if (ask.length > 18) g.fillText('    ' + ask.slice(18, 36), 30, 160);
+      g.fillStyle = '#888'; g.font = `24px ${FONT2}`; g.fillText('우승 상품: 축제 간식 쿠폰 🍡', 30, h - 30);
+      if (q.art) drawArt(g, 390, 90, 290, 220, q.art, { top: '#fff4c2', bottom: '#ffe0ec', ground: 'rgba(255,180,200,0.45)' });
+    });
+  }
   // 긴 테이블 + 노트북
   rbox(5, 0.1, 2, 0.04, '#f0d9b5', { pos: [-0.5, 1.2, -0.5], parent: club });
   for (const [a, b] of [[-2.9, -1.3], [1.9, -1.3], [-2.9, 0.3], [1.9, 0.3]]) cyl(0.05, 0.05, 1.2, '#999', { pos: [a, 0.6, b], parent: club });
@@ -343,6 +359,7 @@ export function build(env) {
     door: shot([CX - 3.5, 2.2, 1.3], [CX - 5.8, 2.0, 0.9], 40),
     laptop: { ...shot([CX + 0.3, 2.6, 2.3], [CX + 0.3, 1.4, 0.2], 40), mark: [CX + 0.3, 1.3, 0.2] },
     jiwoo: { ...shot([CX + 1.2, 2.2, 0.4], [CX + 3.3, 1.7, -1.6], 40), mark: [CX + 3.3, 0.05, -1.6] },
+    clubArt: shot([CX - 1.5, 2.8, 1.2], [CX - 1.5, 2.6, -4.8], 44),
     harin: { ...shot([CX - 0.8, 2.2, 3.6], [CX - 2.6, 1.7, 1.4], 40), mark: [CX - 2.6, 0.05, 1.4] },
   };
 
@@ -351,6 +368,10 @@ export function build(env) {
     scene, actors, shots, focus, marker: mk,
     cast: { '교수님': teacher, '옆자리 친구': students[3] || students[0], '하린': harin, '도윤': doyun, '서준': seojun, '지우': jiwoo },
     startShot: () => shots.seat,
+    showArt(id, q) {
+      if (id === 'school3') drawClubBoard(q);
+      if (env.alt && (id === 'school1' || id === 'school2')) boardQuiz(q);
+    },
     reset() {
       if (env.alt) boardQuiz(env.getQuiz('school1')); else boardBio(); drawGit(false);
       place(scene, mung, [1.5, 0.68, 1.35], Math.PI, 'slump', 'closed');
