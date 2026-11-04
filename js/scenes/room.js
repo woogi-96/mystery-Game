@@ -47,7 +47,7 @@ export function build(env) {
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W * 2, D * 2), new THREE.MeshStandardMaterial({ map: woodTex('#d6aa7c', '#b48459', 10, [2, 2]), roughness: 0.7 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
   // 바닥 테두리 (디오라마 단면)
-  box(W * 2 + 0.3, 0.5, D * 2 + 0.3, '#8b6a52', { pos: [0, -0.26, 0], parent: scene });
+  box(W * 2 + 0.3, 0.5, D * 2 + 0.3, '#8b6a52', { pos: [0, -0.28, 0], parent: scene });
 
   /* 벽 – 뒷벽 (창문 구멍) */
   const back = group(scene, [0, 0, -D]);
@@ -209,7 +209,7 @@ export function build(env) {
   box(0.08, 0.7, 0.05, '#c9ccd2', { pos: [0, 0.4, -0.08], parent: mon });
   rbox(2.1, 1.25, 0.08, 0.03, '#2a2b30', { pos: [0, 1.1, 0], parent: mon });
   const codeLines = Array.from({ length: 22 }, () => ({ ind: Math.floor(Math.random() * 4), parts: Array.from({ length: 1 + Math.floor(Math.random() * 4) }, () => [Math.random() * 90 + 20, ['#ff79c6', '#8be9fd', '#50fa7b', '#f1fa8c', '#bd93f9', '#f8f8f2'][Math.floor(Math.random() * 6)]]) }));
-  let scroll = 0;
+  let scroll = 0, codeT = 0;
   const screen = texPlane(2.0, 1.15, 512, 296, () => {}, { glow: 0.9, pos: [0, 1.1, 0.045], parent: mon });
   function drawCode() {
     screen.tex.redraw((g, w, h) => {
@@ -375,7 +375,8 @@ export function build(env) {
     onEnter() { scene.add(mung.root); },
     update(dt, t) {
       scroll += dt * 20;
-      drawCode();
+      codeT += dt;
+      if (codeT > 0.1) { codeT = 0; drawCode(); }
       led.material.emissiveIntensity = 1 + Math.sin(t * 2) * 0.8;
       if (st.zzz) {
         zzz.forEach((z, i) => {

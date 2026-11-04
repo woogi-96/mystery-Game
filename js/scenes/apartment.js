@@ -30,7 +30,7 @@ export function build(env) {
   const L = 14;
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(L * 2, 4.4), new THREE.MeshStandardMaterial({ map: tileTex('#c9c4bc', '#b0aaa0', 2, [14, 2]), roughness: 0.8 }));
   floor.rotation.x = -Math.PI / 2; floor.position.z = 0; floor.receiveShadow = true; scene.add(floor);
-  box(L * 2, 0.6, 4.6, '#d8d4cc', { pos: [0, -0.3, 0], parent: scene });
+  box(L * 2, 0.6, 4.6, '#d8d4cc', { pos: [0, -0.32, 0], parent: scene });
   // 복도 벽 (1004호 문 자리는 비워 둠)
   box(L + 1.55, 5, 0.3, '#efe8dc', { pos: [(-L + 1.55) / 2, 2.5, -2.3], parent: scene });
   box(L - 3.45, 5, 0.3, '#efe8dc', { pos: [(L + 3.45) / 2, 2.5, -2.3], parent: scene });
@@ -117,7 +117,8 @@ export function build(env) {
   script.material.side = THREE.DoubleSide;
   // 엘리베이터 + 광고 모니터 + 디지털 시계
   const elev = group(scene, [-13.8, 0, 0]);
-  for (const s of [-1, 1]) box(0.1, 3.8, 0.95, mat('#c7ccd4', { metalness: 0.8, roughness: 0.25 }), { pos: [0.15, 1.9, s * 0.5], parent: elev });
+  const elevDoors = [-1, 1].map(s => box(0.1, 3.8, 0.95, mat('#c7ccd4', { metalness: 0.8, roughness: 0.25 }), { pos: [0.15, 1.9, s * 0.5], parent: elev }));
+  plane(1.9, 3.8, emissive('#fff3d6', 0.9), { pos: [-0.02, 1.9, 0], rot: [0, Math.PI / 2, 0], parent: elev });
   const clockP = texPlane(1.6, 0.55, 320, 110, (g, w, h) => { g.fillStyle = '#0a0a0a'; g.fillRect(0, 0, w, h); g.fillStyle = '#ff5a5a'; g.font = `80px ${FONT}`; g.textAlign = 'center'; g.fillText('AM 02:00', w / 2, 86); }, { glow: 1.2, pos: [0.17, 4.25, 0], rot: [0, Math.PI / 2, 0], parent: elev });
   const tv = texPlane(1.5, 1.0, 300, 200, () => {}, { glow: 1.0, pos: [0.17, 2.3, -1.55], rot: [0, Math.PI / 2, 0], parent: elev });
   tv.tex.redraw((g, w, h) => {
@@ -138,7 +139,7 @@ export function build(env) {
 
   /* 인물 */
   const neighbor = npc('neighbor');
-  const guard = npc('driver', { cap: '#3a4a3a', top: '#6a7a5a', tie: null, hairColor: '#999', glasses: true });
+  const guard = npc('guard');
 
   const hemi = new THREE.HemisphereLight('#8a94d8', '#2a2440', 0.7); scene.add(hemi);
   const moonL = new THREE.DirectionalLight('#b8c4ff', 0.9);
@@ -171,6 +172,7 @@ export function build(env) {
       neighbor.root.visible = false; guard.root.visible = false;
       inside.visible = false; booLight.intensity = 0;
       doors['1004'].pivot.rotation.y = 0;
+      doors['1003'].pivot.rotation.y = 0;
       ceil.forEach(c => (c.on = 0));
     },
     onEnter() { scene.add(mung.root); },
@@ -188,11 +190,18 @@ export function build(env) {
 
     async play(env) {
       const { ui } = env;
-      await env.cameraTo(shots.elev, 1.8);
+      // 우기네 엘리베이터에서 내렸는데… 우리 집 복도
+      place(scene, mung, [-13.4, 0, 0], Math.PI / 2, 'idle', 'open');
+      elevDoors.forEach(d => (d.position.z = Math.sign(d.position.z) * 0.5));
+      sfx.blip();
+      await anim(0.9, k => elevDoors.forEach(d => (d.position.z = Math.sign(d.position.z) * (0.5 + k * 0.95))));
+      await walkTo(mung, -12.0, 0.8, 2.0);
+      anim(0.9, k => elevDoors.forEach(d => (d.position.z = Math.sign(d.position.z) * (1.45 - k * 0.95))));
+      await env.cameraTo(shots.elev, 1.4);
       mung.setExpr('surprised');
-      await say(mung, '멍뭉', '……어? 버스에서 내렸는데… 여긴 우리 아파트 10층 복도잖아?');
+      await say(mung, '멍뭉', '……어? 우기네 10층에 내렸는데… 여긴 우리 아파트 복도잖아? 1003호 우리 집!');
       mung.setExpr('open');
-      await say(mung, '멍뭉', '시계는 새벽 2시… 꿈이라 그런가, 장면이 뚝뚝 끊기네.');
+      await say(mung, '멍뭉', '시계는 새벽 2시… 우기는 내일 만나야겠다. 그런데 옆집이 시끄럽네…?');
       walkTo(mung, 0.6, 0.6, 2.2);
       await env.cameraTo(shots.hall, 2.4);
       const voice = textSprite('🎙 "Good morning, team!"', { size: 54, scale: 0.6, border: '#a8c8ff' });
@@ -257,8 +266,15 @@ export function build(env) {
       neighbor.setPose('wave');
       await say(neighbor, '1004호', '이웃사촌 기념으로 사인 카드 드릴게요. 엔딩 크레딧에 제 이름 있어요! 😆');
       mung.setPose('cheer'); mung.setExpr('happy');
-      await say(mung, '멍뭉', '역시 "가설을 가르는 증거"가 답이었어! 그런데… 왠지… 모든 게… 하얗게……');
+      await say(mung, '멍뭉', '역시 "가설을 가르는 증거"가 답이었어! 수수께끼도 풀렸으니… 이제 진짜 집에 들어가서 자야지.');
       mung.setPose('idle'); mung.setExpr('sleepy');
+      // 1003호(우리 집) 문을 열고 들어가면 → 현실의 아침
+      env.cameraTo(shot([-0.5, 2.8, 3.6], [-3.5, 1.8, -1.8], 48), 1.6);
+      await walkTo(mung, -3.5, 0.2, 2.4, Math.PI);
+      sfx.door();
+      await anim(0.8, k => (doors['1003'].pivot.rotation.y = k * 1.4));
+      await walkTo(mung, -3.5, -1.6, 1.6);
+      await ui.caption('현관문 너머로, 눈부신 햇살이 쏟아진다……', 2.2);
       return 'ok';
     },
     debug(state) {

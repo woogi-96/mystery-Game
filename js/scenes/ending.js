@@ -76,7 +76,7 @@ export function build(env) {
   const say = talker(env.ui);
   let heartOn = false;
   const sc = {
-    scene: date, actors: [],
+    scene: date, extraScenes: [voidS], actors: [],
     shots: {
       wide: shot([0, 6, 22], [0, 1.5, 0], 50),
       meet: shot([4.5, 2.8, 8.5], [0, 1.4, 3.0], 46),

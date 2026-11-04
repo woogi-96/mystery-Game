@@ -72,7 +72,7 @@ export function build(env) {
   const floorB = new THREE.Mesh(new THREE.PlaneGeometry(BW * 2, BL * 2), mat('#5a5f6a'));
   floorB.rotation.x = -Math.PI / 2; floorB.receiveShadow = true; bus.add(floorB);
   box(BW * 2 - 2.6, 0.02, BL * 2, '#4a7a6a', { pos: [0, 0.01, 0], parent: bus, cast: false });
-  box(BW * 2 + 0.3, 1.1, BL * 2 + 0.3, '#2f9a5f', { pos: [0, -0.55, 0], parent: bus });
+  box(BW * 2 + 0.3, 1.1, BL * 2 + 0.3, '#2f9a5f', { pos: [0, -0.57, 0], parent: bus });
   const bodyM = mat('#3fb36f');
   for (const s of [-1, 1]) {
     box(0.2, 1.6, BL * 2, bodyM, { pos: [s * BW, 0.8, 0], parent: bus });
@@ -98,6 +98,7 @@ export function build(env) {
   // 노선 LED 전광판
   const led = texPlane(3.6, 0.45, 720, 90, () => {}, { glow: 1.2, pos: [0, BH - 0.45, -BL + 0.3], parent: bus });
   box(3.8, 0.55, 0.2, '#111', { pos: [0, BH - 0.45, -BL + 0.2], parent: bus });
+  let ledT = 0;
   let ledText = '이번 정류장: 시청  ▶  다음 정류장: 별빛아파트', ledColor = '#ff9a2a', ledScroll = 0;
   function drawLed() {
     led.tex.redraw((g, w, h) => {
@@ -235,6 +236,7 @@ export function build(env) {
     side: shot([1.4, 2.6, 1.5], [-1.6, 2.0, 0.6], 50),
     front: shot([0.6, 2.9, -1.2], [-1.3, 1.6, -4.6], 50),
     outside: shot([7, 4, -10], [0, 2, -2], 50),
+    board: shot([-0.6, 3.0, 1.2], [1.4, 1.5, -3.6], 54),
     mapView: shot([0, 2.6, 1.4], [0, 2.5, 5.6], 52),
   };
   const focus = {
@@ -255,7 +257,7 @@ export function build(env) {
 
   const sc = {
     scene, shots, focus, marker: mk, actors: [driver, driver2, grandma, student, worker, medic],
-    startShot: () => shots.wide,
+    startShot: () => shots.board,
     reset() {
       speed = 40; wobble = 0; blink = false; siren = false;
       ledText = '이번 정류장: 시청  ▶  다음 정류장: 별빛아파트'; ledColor = '#ff9a2a';
@@ -286,7 +288,8 @@ export function build(env) {
       world.rotation.y = Math.sin(t * 1.3) * wobble * 0.05;
       straps.forEach((s, i) => (s.rotation.x = Math.sin(t * 2 + i * 0.3) * 0.08 * (speed / 40 + wobble)));
       ledScroll += dt * 120;
-      drawLed();
+      ledT += dt;
+      if (ledT > 0.05) { ledT = 0; drawLed(); }
       if (blink) { const on = Math.sin(t * 8) > 0; hazards.forEach(h => (h.material.emissiveIntensity = on ? 3 : 0)); hazardLight.intensity = on ? 6 : 0; }
       if (siren) { const r = Math.sin(t * 10) > 0; sirenLight.color.set(r ? '#ff3030' : '#3060ff'); sirenLight.intensity = 30; sirenR.material.emissiveIntensity = r ? 4 : 0.5; sirenB.material.emissiveIntensity = r ? 0.5 : 4; }
       if (sw.mesh.visible) sw.update(t);
@@ -294,8 +297,18 @@ export function build(env) {
 
     async play(env) {
       const { ui } = env;
+      // 회사 앞 정류장에서 742번 버스에 탄다
+      speed = 0;
+      place(scene, mung, [1.7, 0, -4.4], -Math.PI / 2 - 0.4, 'idle', 'happy');
+      sfx.door();
+      await wait(0.6);
+      sfx.blip();
+      await say(null, '단말기', '삑— 감사합니다.');
+      await walkTo(mung, -0.3, 0.8, 2.4);
+      place(scene, mung, [-1.55, 0.38, 0.8], Math.PI - 0.6, 'sitChair', 'open');
+      anim(2.5, k => (speed = 40 * k));
       await env.cameraTo(shots.side, 2);
-      await say(mung, '멍뭉', '우기네 가는 버스~ 10시 반까지 정류장에서 만나기로 했지. 헤헤.');
+      await say(mung, '멍뭉', '우기네 가는 버스~ 10시 반까지 별빛아파트 정류장에서 만나기로 했지. 헤헤.');
       // 노선 이탈
       wobble = 0.6;
       ledText = '⚠ 노선 이탈 ⚠  ⚠ 노선 이탈 ⚠'; ledColor = '#ff4040';
@@ -380,9 +393,12 @@ export function build(env) {
       await anim(1.5, k => (speed = 40 * (1 - k)));
       ledText = '이번 정류장: 별빛아파트'; ledColor = '#ffcc40';
       [grandma, student, worker, mung].forEach(c => { c.setPose(c === mung ? 'cheer' : c.pose); c.setExpr('happy'); });
-      await say(mung, '멍뭉', '도착! 1분 남았다…! 우기야, 나 왔—');
-      mung.setPose('idle'); mung.setExpr('sleepy');
-      await say(mung, '멍뭉', '……어라? 문이 열리는데… 눈앞이 또 흐려져……');
+      await say(mung, '멍뭉', '도착! 1분 남았다…! 우기네 집 10층이랬지? 엘리베이터 타고 올라가자!');
+      mung.setPose('idle');
+      sfx.door();
+      await walkTo(mung, 1.6, -4.3, 2.8);
+      await ui.fadeTo('#000', 1, 0.8);
+      await ui.caption('🛗 별빛아파트 엘리베이터 · 10층 버튼을 누른다…  띵!', 2.2);
       return 'ok';
     },
     debug(state) { if (state === 'stop') { speed = 0; blink = true; driver.setPose('slump'); } },

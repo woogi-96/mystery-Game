@@ -17,7 +17,7 @@ export function build(env) {
   const W = 12, D = 8, H = 5.2;
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W * 2, D * 2), new THREE.MeshStandardMaterial({ map: tileTex('#8e98a8', '#7d8797', 2, [8, 6]), roughness: 0.8 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-  box(W * 2 + 0.3, 0.4, D * 2 + 0.3, '#3a3f4c', { pos: [0, -0.2, 0], parent: scene });
+  box(W * 2 + 0.3, 0.4, D * 2 + 0.3, '#3a3f4c', { pos: [0, -0.22, 0], parent: scene });
   const wallM = mat('#e9edf3');
   box(0.3, H, D * 2, wallM, { pos: [-W, H / 2, 0], parent: scene });
   box(0.3, H, D * 2, wallM, { pos: [W, H / 2, 0], parent: scene });
@@ -156,7 +156,8 @@ export function build(env) {
   // 엘리베이터
   const elev = group(scene, [-W + 0.2, 0, -5.6]);
   box(0.25, 4.2, 2.6, '#9aa3b0', { pos: [0, 2.1, 0], parent: elev });
-  for (const s of [-1, 1]) box(0.08, 3.8, 1.15, mat('#c7ccd4', { metalness: 0.8, roughness: 0.25 }), { pos: [0.12, 1.9, s * 0.6], parent: elev });
+  const elevDoors = [-1, 1].map(s => box(0.08, 3.8, 1.15, mat('#c7ccd4', { metalness: 0.8, roughness: 0.25 }), { pos: [0.12, 1.9, s * 0.6], parent: elev }));
+  plane(2.3, 3.8, emissive('#fff3d6', 0.9), { pos: [-0.05, 1.9, 0], rot: [0, Math.PI / 2, 0], parent: elev });
   const elevBtn = sph(0.06, emissive('#ffcc40', 1.2), { pos: [0.2, 1.7, 1.5], parent: elev, cast: false });
   texPlane(0.9, 0.3, 200, 66, (g) => { g.fillStyle = '#111'; g.fillRect(0, 0, 200, 66); g.fillStyle = '#ff6040'; g.font = `40px ${FONT}`; g.fillText('▲ 12F', 30, 48); }, { glow: 0.6, pos: [0.15, 4.0, 0], rot: [0, Math.PI / 2, 0], parent: elev });
   // 서버실 + UPS
@@ -202,7 +203,7 @@ export function build(env) {
   /* 비상계단 (x + 60) */
   const SX = 60;
   const stairs = group(scene, [SX, 0, 0]);
-  box(14, 0.4, 10, '#6b6f78', { pos: [0, -0.2, 0], parent: stairs });
+  box(14, 0.4, 10, '#6b6f78', { pos: [0, -0.22, 0], parent: stairs });
   box(14, 9, 0.3, '#8a8e96', { pos: [0, 4.5, -5], parent: stairs });
   box(0.3, 9, 10, '#7f838c', { pos: [-7, 4.5, 0], parent: stairs });
   const landing = new THREE.Mesh(new THREE.PlaneGeometry(14, 10), mat('#9a9ea6'));
@@ -243,6 +244,7 @@ export function build(env) {
     screen: shot([1.5, 2.25, 3.2], [1.05, 1.95, 1.9], 36),
     dark: shot([4, 6.5, 12], [-3, 1.2, -1], 52),
     door: shot([-6.5, 3.2, 3.5], [-11.5, 2.0, -0.5], 50),
+    elevIn: shot([-6.8, 3.0, -1.8], [-11.2, 1.9, -5.6], 50),
     stairs: shot([SX - 1, 4.0, 8.5], [SX - 1.2, 1.4, 0], 52),
   };
   const focus = {
@@ -282,9 +284,10 @@ export function build(env) {
 
   const sc = {
     scene, shots, focus, marker: mk, actors: crewList,
-    startShot: () => shots.wide,
+    startShot: () => shots.elevIn,
     reset() {
       setBlackout(0);
+      elevDoors.forEach((d, i) => (d.position.z = (i ? 1 : -1) * 0.6));
       drawEmail(false); upsLeft = 7; drawUps(false);
       place(scene, mung, [0.5, 0.38, 3.4], Math.PI, 'type');
       crewList.forEach((c, i) => {
@@ -315,7 +318,20 @@ export function build(env) {
 
     async play(env) {
       const { ui } = env;
-      await env.cameraTo(shots.desk, 2);
+      // 동굴의 빛 → 회사 엘리베이터 문이 열린다
+      place(scene, mung, [-11.0, 0, -5.6], Math.PI / 2, 'idle', 'surprised');
+      sfx.blip();
+      await anim(1.0, k => elevDoors.forEach((d, i) => (d.position.z = (i ? 1 : -1) * (0.6 + k * 1.1))));
+      await walkTo(mung, -9.2, -5.2, 2.2);
+      await say(mung, '멍뭉', '……어? 동굴 문을 열었더니… 우리 회사 12층?!');
+      mung.setExpr('open');
+      await say(mung, '멍뭉', '아 맞다, 오늘 v2.3 배포날이었지! 얼른 자리로 가자.');
+      anim(1.0, k => elevDoors.forEach((d, i) => (d.position.z = (i ? 1 : -1) * (1.7 - k * 1.1))));
+      env.cameraTo(shots.wide, 2.4);
+      await walkTo(mung, -1.5, 5.6, 3.0);
+      await walkTo(mung, 0.5, 4.4, 3.0);
+      place(scene, mung, [0.5, 0.38, 3.4], Math.PI, 'type');
+      await env.cameraTo(shots.desk, 1.6);
       await say(mung, '멍뭉', '배포 끝! 이제 완료 메일만 보내면 퇴근이다…!');
       await env.cameraTo(shots.screen, 1.4);
       await say(mung, '멍뭉', '"보내기" 클릭~');
@@ -421,8 +437,10 @@ export function build(env) {
       await say(crew['김팀장'], '김팀장', '8명 전원 확인! 멍뭉 덕분에 다 무사하다. 고마워!');
       await say(mung, '멍뭉', '헤헤… 아, 근데 그 메일… 안 보내졌겠지…?');
       await say(crew['오선임'], '오선임', '걱정 마요~ 메일은 "임시 저장"돼 있을 거예요 ㅎㅎ');
-      mung.setPose('idle'); mung.setExpr('sleepy');
-      await say(mung, '멍뭉', '다행이다… 긴장이 풀리니까… 또 졸음이……');
+      mung.setPose('idle'); mung.setExpr('happy');
+      await say(mung, '멍뭉', '다행이다! 그럼 다 같이 1층으로 내려가요. 저는 진짜 퇴근! 우기 보러 가야지~');
+      await ui.fadeTo('#000', 1, 0.9);
+      await ui.caption('🚏 회사 앞 버스 정류장 · 밤 10시 3분 · 742번 버스가 들어온다', 2.4);
       return 'ok';
     },
 

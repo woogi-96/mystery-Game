@@ -42,9 +42,10 @@ export function turnTo(ch, rot, dur = 0.4) {
 export function emote(scene, ch, text, dur = 1.8, o = {}) {
   const s = textSprite(text, { size: 80, scale: o.scale || 0.6, ...o });
   scene.add(s);
+  const hp = new THREE.Vector3();
   const upd = () => {
-    const p = ch.root.position;
-    s.position.set(p.x, p.y + 2.75 * (ch.o.scale || 1), p.z);
+    ch.head.getWorldPosition(hp);
+    s.position.set(hp.x, hp.y + (ch.human ? 1.0 : 1.35), hp.z);
   };
   upd();
   s.material.opacity = 0;

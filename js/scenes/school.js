@@ -29,7 +29,7 @@ export function build(env) {
   const room = group(scene);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W * 2, D * 2), new THREE.MeshStandardMaterial({ map: woodTex('#d9b48a', '#b88d62', 12, [2, 2]), roughness: 0.7 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; floor.receiveShadow = true; room.add(floor);
-  box(W * 2 + 0.3, 0.4, D * 2 + 0.3, '#9a8070', { pos: [0, -0.19, 0], parent: room });
+  box(W * 2 + 0.3, 0.4, D * 2 + 0.3, '#9a8070', { pos: [0, -0.22, 0], parent: room });
   const wallTop = mat('#fbf4e6'), wallBot = mat('#9cc9b4');
   // 앞벽 (칠판)
   box(W * 2, H - 1.2, 0.3, wallTop, { pos: [0, 1.2 + (H - 1.2) / 2, -D], parent: room });
@@ -180,7 +180,7 @@ export function build(env) {
   const club = group(scene, [CX, 0, 0]);
   const cfloor = new THREE.Mesh(new THREE.PlaneGeometry(12, 10), new THREE.MeshStandardMaterial({ map: tileTex('#e6e1ea', '#cfc7d6', 4, [4, 4]), roughness: 0.6 }));
   cfloor.rotation.x = -Math.PI / 2; cfloor.position.y = 0.01; cfloor.receiveShadow = true; club.add(cfloor);
-  box(12.3, 0.4, 10.3, '#8b7a90', { pos: [0, -0.19, 0], parent: club });
+  box(12.3, 0.4, 10.3, '#8b7a90', { pos: [0, -0.22, 0], parent: club });
   box(12, H, 0.3, '#eaf2ff', { pos: [0, H / 2, -5], parent: club });
   box(0.3, H, 10, '#e2ecff', { pos: [-6, H / 2, 0], parent: club });
   box(0.3, H, 10, '#e2ecff', { pos: [6, H / 2, 0], parent: club });
@@ -307,10 +307,10 @@ export function build(env) {
   const say = talker(env.ui);
   const sc = {
     scene, actors, shots, focus, marker: mk,
-    startShot: () => shots.wide,
+    startShot: () => shots.seat,
     reset() {
       boardBio(); drawGit(false);
-      place(scene, mung, [1.5, 0.38, 1.35], Math.PI, 'sitChair');
+      place(scene, mung, [1.5, 0.38, 1.35], Math.PI, 'slump', 'closed');
       teacher.root.position.set(3.0, 0, -5.0); teacher.setPose('idle');
       [harin, doyun].forEach(c => { c.setPose('angry'); c.setExpr('open'); });
       seojun.setPose('idle'); jiwoo.setPose('idle'); jiwoo.setExpr('sad');
@@ -325,11 +325,17 @@ export function build(env) {
     async play(env) {
       const { ui } = env;
       const T = teacher;
-      await env.cameraTo(shots.seat, 2);
-      mung.setExpr('surprised');
-      await say(mung, '멍뭉', '……어? 여기… 고등학교 교실? 나 방금 집에서 잤는데…?');
+      // 방에서 잠든 멍뭉 → 꿈속에서도 책상에 엎드려 자고 있다
+      await ui.caption('…… 딩동댕동~', 1.4);
+      sfx.bell();
+      T.setPose('point');
+      await say(T, '선생님', '멍뭉 학생! 수업 시작했어요. 일어나세요~');
+      mung.setPose('sitChair'); mung.setExpr('surprised');
+      env.shake(0.08);
+      await say(mung, '멍뭉', '……헉! 어? 여기… 고등학교 교실? 분명 방에서 자고 있었는데…?');
       mung.setExpr('open');
-      await say(mung, '멍뭉', '(교복 대신 후드티… 이거 완전 꿈이네.)');
+      await say(mung, '멍뭉', '(교복 대신 후드티 그대로네… 이거 완전 꿈이다.)');
+      await env.cameraTo(shots.wide, 1.6);
       env.cameraTo(shots.boardView, 1.5);
       T.setPose('point');
       await say(T, '선생님', '자, 멍뭉 학생! 졸지 말고. 오늘은 일주일 동안 키운 화분 실험 결과를 볼 거예요.');
@@ -393,8 +399,14 @@ export function build(env) {
       await env.cameraTo(shots.clubMid, 1.2);
       [harin, doyun, seojun, jiwoo, mung].forEach(c => { c.setPose('cheer'); c.setExpr('happy'); });
       await say(doyun, '도윤', '복구됐다!! 그리고 main 브랜치에 force push 금지 걸어놨어. 이제 이런 일 없을 거야!');
-      await say(mung, '멍뭉', '휴… 다행이다. 그런데… 갑자기… 너무 졸려……');
-      mung.setPose('idle'); mung.setExpr('sleepy');
+      await say(harin, '하린', '멍뭉아 고마워! 우리 축제 끝나면 학교 앞 공원에서 떡볶이 먹자~');
+      await say(mung, '멍뭉', '좋아! 그럼 나 먼저 공원 한 바퀴 돌고 있을게. 다들 내일 축제 파이팅!');
+      mung.setPose('idle'); mung.setExpr('happy');
+      // 동아리방 문을 열고 나가면 → 공원
+      env.cameraTo(shot([CX - 1.5, 2.6, 5.5], [CX - 5.6, 1.8, 2.5], 48), 1.6);
+      await walkTo(mung, CX - 5.2, 2.5, 2.4, -Math.PI / 2);
+      sfx.door();
+      await ui.caption('문을 열자, 따뜻한 오후 햇살이 쏟아진다…', 2);
       return 'ok';
     },
   };

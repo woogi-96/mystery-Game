@@ -357,7 +357,7 @@ export function build(env) {
   let flameWild = 0;
 
   const sc = {
-    scene: park, actors: [walker1, walker2], shots, focus, marker: mk,
+    scene: park, extraScenes: [cave], actors: [walker1, walker2], shots, focus, marker: mk,
     startShot: () => shots.wide,
     reset() {
       sc.scene = park;
@@ -402,7 +402,7 @@ export function build(env) {
       mung.setExpr('happy');
       for (const u of pts) { const p = pathCurve.getPointAt(u); await walkTo(mung, p.x, p.z, 2.6); }
       mung.setExpr('open');
-      await say(mung, '멍뭉', '날씨 좋다~ 이런 날은 산책이 최고지.');
+      await say(mung, '멍뭉', '학교 앞 공원 도착~ 축제 준비로 머리 아팠는데, 이런 날은 산책이 최고지.');
       const p70 = pathCurve.getPointAt(0.82); await walkTo(mung, p70.x, p70.z, 2.6);
       await env.cameraTo(shots.caveFront, 1.8);
       mung.setExpr('surprised');
@@ -481,9 +481,9 @@ export function build(env) {
       await say(mung, '멍뭉', '빛이다!! 탈출 성공~!!');
       walkTo(mung, wp.x * 1.1, Z3 + (wp.z - Z3) * 1.1, 2.4);
       await ui.fadeTo('#fff', 1, 1.0);
-      mung.setPose('idle'); mung.setExpr('sleepy');
-      await ui.fadeTo('#fff', 0, 0.6);
-      await say(mung, '멍뭉', '눈이 부셔… 으음… 또 졸려……');
+      mung.setPose('idle'); mung.setExpr('open');
+      sfx.blip();
+      await ui.caption('빛 속으로 한 발 내딛자… "띵동♪" 어디선가 엘리베이터 소리가…', 2.4);
       return 'ok';
     },
 

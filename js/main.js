@@ -13,7 +13,7 @@ import * as Ending from './scenes/ending.js';
 
 /* ───────── 렌더러 ───────── */
 const canvas = document.getElementById('gl');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -21,7 +21,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 600);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 600);
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
@@ -61,9 +61,23 @@ const cache = {};
 let current = null;
 
 function getScene(mod, key) {
-  if (!cache[key]) cache[key] = mod.build(env);
+  if (!cache[key]) {
+    cache[key] = mod.build(env);
+    stabilize(cache[key]);
+  }
   return cache[key];
 }
+/* 깜빡임 방지: 그림자 여드름(shadow acne) 보정 + 소수점 위치 흔들림 방지 */
+function stabilize(sc) {
+  const scenes = new Set([sc.scene, ...(sc.extraScenes || [])]);
+  scenes.forEach(s => s && s.traverse(o => {
+    if (o.isLight && o.castShadow) {
+      o.shadow.bias = o.isPointLight ? -0.004 : -0.0006;
+      o.shadow.normalBias = 0.03;
+    }
+  }));
+}
+
 function setScene(s) {
   current = s;
   if (s.onEnter) s.onEnter();
@@ -122,6 +136,7 @@ const env = {
       camBase.fov = f0 + k * 35;
     }, ease.in);
     setScene(nextScene);
+    ui.fadeOut(1.2);
     const sh = intoShot;
     const back = sh.look.clone().sub(sh.pos).normalize();
     camBase.pos.copy(sh.pos).addScaledVector(back, -3);
@@ -197,7 +212,7 @@ async function playEpisodes(from) {
     ui.clock(false);
     ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, 0, 3);
     ui.setHearts(state.hearts);
-    await env.dreamWarp(sc, sc.startShot(), { no: `DREAM ${ep.no}`, title: ep.title, sub: ['중간', '어려움', '초어려움'].join(' → ') });
+    await env.dreamWarp(sc, sc.startShot(), { no: `DREAM ${ep.no}`, title: ep.title, sub: '난이도 하 → 중 → 상' });
     const res = await sc.play(env);
     if (res === 'fail') return { fail: i };
   }

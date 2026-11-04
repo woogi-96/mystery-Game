@@ -82,10 +82,17 @@ export const ui = {
     const from = parseFloat(f.style.opacity || 0);
     return anim(dur, k => (f.style.opacity = from + (to - from) * k));
   },
+  fadeOut(dur = 1) {
+    const f = $('fade');
+    const from = parseFloat(f.style.opacity || 0);
+    if (from <= 0) return Promise.resolve();
+    return anim(dur, k => (f.style.opacity = from * (1 - k)));
+  },
   dreamFx(to, dur = 1.2) {
     const d = $('dreamfx');
     const from = parseFloat(d.style.opacity || 0);
-    return anim(dur, k => (d.style.opacity = from + (to - from) * k));
+    d.style.display = 'block';
+    return anim(dur, k => (d.style.opacity = from + (to - from) * k)).then(() => { if (to === 0) d.style.display = 'none'; });
   },
   vignette(on) { $('vignette').classList.toggle('on', on); },
 
@@ -118,8 +125,8 @@ export const ui = {
     box.classList.remove('hidden', 'collapsed');
     $('qToggle').textContent = '장면 보기 ▾';
     const lv = $('qLevel');
-    lv.textContent = q.level;
-    lv.className = 'lvl ' + ({ '중간': 'l1', '어려움': 'l2', '초어려움': 'l3' }[q.level]);
+    lv.textContent = `난이도 ${q.level}`;
+    lv.className = 'lvl ' + ({ '하': 'l1', '중': 'l2', '상': 'l3' }[q.level]);
     $('qTitle').textContent = q.title;
     $('qSituation').textContent = q.situation;
     $('qQuestion').textContent = 'Q. ' + q.question;

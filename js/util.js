@@ -99,8 +99,8 @@ export function canvasTex(w, h, draw) {
 export function texPlane(w, h, pw, ph, draw, o = {}) {
   const tex = canvasTex(pw, ph, draw);
   const material = o.glow
-    ? new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: o.glow, roughness: 0.6, transparent: !!o.transparent })
-    : new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, transparent: !!o.transparent });
+    ? new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: o.glow, roughness: 0.6, transparent: !!o.transparent, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 })
+    : new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, transparent: !!o.transparent, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
   const m = finish(new THREE.Mesh(new THREE.PlaneGeometry(w, h), material), { cast: false, receive: false, ...o });
   m.tex = tex;
   return m;
@@ -217,7 +217,7 @@ export function sparkles(count, area, color = 0xffe6ff, size = 0.12) {
     gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   });
-  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color, size, map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color, size: Math.max(2.5, size * 28) * Math.min(2, window.devicePixelRatio || 1), sizeAttenuation: false, map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   const base = p.slice();
   pts.update = (t) => {
     for (let i = 0; i < count; i++) {
@@ -225,7 +225,7 @@ export function sparkles(count, area, color = 0xffe6ff, size = 0.12) {
       p[i * 3] = base[i * 3] + Math.cos(t * 0.4 + ph[i]) * 0.25;
     }
     geo.attributes.position.needsUpdate = true;
-    pts.material.opacity = 0.7 + Math.sin(t * 2) * 0.2;
+    pts.material.opacity = 0.75;
   };
   return pts;
 }

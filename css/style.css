@@ -19,10 +19,10 @@ button { font-family: var(--font); cursor: pointer; border: none; }
 #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(40, 10, 50, 0.35) 100%); opacity: 0; transition: opacity 1.5s; }
 #vignette.on { opacity: 1; }
 #fade { position: fixed; inset: 0; pointer-events: none; background: #000; opacity: 0; }
-#dreamfx { position: fixed; inset: 0; pointer-events: none; opacity: 0; overflow: hidden; }
+#dreamfx { position: fixed; inset: 0; pointer-events: none; opacity: 0; overflow: hidden; display: none; }
 #dreamfx .swirl { position: absolute; left: 50%; top: 50%; width: 260vmax; height: 260vmax; margin: -130vmax 0 0 -130vmax;
   background: conic-gradient(from 0deg, #ffd6e8, #d9c8ff, #bfe9ff, #c9ffe8, #fff2bf, #ffd6e8);
-  animation: spin 6s linear infinite; filter: blur(30px); }
+  animation: spin 6s linear infinite; filter: blur(14px); will-change: transform; }
 #dreamfx .s2 { background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0.6) 25%, rgba(255,255,255,0) 60%); animation: pulse 2s ease-in-out infinite; filter: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 50% { transform: scale(1.2); } }
