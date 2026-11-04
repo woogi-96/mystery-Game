@@ -155,35 +155,46 @@ export function build(env) {
       woogi.setPose('wave'); woogi.setExpr('happy');
       await turnTo(woogi, -0.7, 0.4);
       await say(woogi, '우기', '멍뭉아! 여기야 여기~!');
-      // 꿈 이야기 옹알옹알
+      // 꿈 이야기 옹알옹알 (그 판에서 푼 문제와 고른 선택이 그대로 들어간다)
       const f = env.state.flags || {};
+      const R0 = env.state.round;
       const topic = id => { const t = env.getQuiz(id).title; return t.includes('·') ? t.split('·').pop().trim() : t; };
+      const riddle = () => { const q = env.getQuiz('school3'); return (q.ask || '').replace(/^문제!\s*/, ''); };
+      const pick = (arr, k) => arr[(R0 + k) % arr.length];
       const babble = (text) => say(mung, '멍뭉', text, { speed: 16 });
       const wsay = (text) => say(woogi, '우기', text);
       await env.cameraTo(sc.shots.couple, 1.4);
       mung.setPose('cheer'); mung.setExpr('happy');
-      await babble('우기야 우기야! 나 어젯밤에 진짜 이상한 꿈 꿨어! 들어 봐 들어 봐!');
+      await babble(pick(['우기야 우기야! 나 어젯밤에 진짜 이상한 꿈 꿨어! 들어 봐 들어 봐!', '우기야! 나 꿈에서 하루를 통째로 살고 왔어! 들어 볼래?', '대박 사건! 나 어젯밤 꿈이 완전 영화였어! 얘기해 줄게!'], 0));
       woogi.setPose('idle'); woogi.setExpr('happy');
-      await wsay('응응, 무슨 꿈인데? ㅎㅎ');
+      await wsay(pick(['응응, 무슨 꿈인데? ㅎㅎ', '뭔데 뭔데? 궁금해!', '또 무슨 꿈을 꿨길래~ ㅋㅋ'], 1));
       mung.setPose('wave');
       await babble((f.attend === 1 ? '처음엔 대학교였는데, 교수님이 출석 부를 때 자는 척하다가 딱 걸렸어…' : '처음엔 대학교였는데, 교수님이 출석 부르길래 "네!!" 했더니 목소리가 다 잠겨서 다들 웃고…')
-        + ` 수업에선 「${topic('school1')}」 문제도 풀었다?`);
-      await babble(f.snack === 0 ? '동아리방에선 서준이가 민트초코 떡볶이를 줬는데… 이상하게 맛있었어!! 넌센스 퀴즈 대회도 내가 우승!' : '동아리방에선 서준이가 민트초코 떡볶이를 주길래 겨우 피했지 ㅋㅋ 넌센스 퀴즈 대회는 내가 우승!');
-      await wsay('ㅋㅋㅋ 민트초코 떡볶이는 뭐야~');
+        + ` 수업에선 「${topic('school1')}」, 「${topic('school2')}」 문제도 풀었다?`);
+      await wsay(pick(['꿈에서도 수업을 들었어? ㅋㅋ 대학생 멍뭉이 귀엽다', '헐 꿈에서도 공부했구나~ 기특해', '어려운 거 했네? 나도 그 수업 듣고 싶다 ㅋㅋ'], 2));
+      await babble((f.snack === 0 ? '동아리방에선 서준이가 민트초코 떡볶이를 줬는데… 이상하게 맛있었어!!' : '동아리방에선 서준이가 민트초코 떡볶이를 주길래 겨우 피했지 ㅋㅋ')
+        + ` 넌센스 대회에선 "${riddle()}" 이거 맞혀서 내가 우승!`);
+      await wsay(pick(['ㅋㅋㅋ 민트초코 떡볶이는 뭐야~', '넌센스 우승이라니, 역시 아재개그 장인~', 'ㅋㅋㅋ 그 문제 나도 내 봐야지'], 3));
       mung.setPose('think');
       await babble((f.light === 1 ? '그다음엔 공원 동굴에 갇혔는데 손전등도 안 켜고 들어갔다가 돌부리에 쿵!' : '그다음엔 공원 동굴에 갇혔는데, 손전등 켜고 들어가서 관리인 아저씨한테 칭찬받았다?')
-        + ' 수수께끼 풀어서 탈출했어!');
+        + ` 「${topic('cave1')}」, 「${topic('cave2')}」, 「${topic('cave3')}」… 수수께끼 세 개 풀고 탈출했어!`);
+      await wsay(pick(['우와, 머리 엄청 썼겠다!', '동굴이라니 무서웠겠다… 그래도 잘 나왔네!', '그거 나 풀어 보라 하면 못 풀었을 듯 ㅋㅋ'], 4));
       mung.setPose('panic');
-      await babble((f.mail === 0 ? '회사에선 야근하다 정전이 났는데, 메일부터 보내려다 팀장님한테 혼나고…' : '회사에선 야근하다 정전이 났는데, 내가 "다들 계단으로!" 외쳤다?')
-        + ' 폰부스에 혼자 남은 박사원님도 내가 찾았어!');
+      await babble(`회사에선 「${topic('office1')}」, 「${topic('office2')}」 문제 풀면서 일하다가`
+        + (f.mail === 0 ? ' 야근 중에 정전이 났는데, 메일부터 보내려다 팀장님한테 혼나고…' : ' 야근 중에 정전이 났는데, 내가 "다들 계단으로!" 외쳤다?')
+        + ` 「${topic('office3')}」 문제까지 풀어서 폰부스에 남은 박사원님도 찾았어!`);
       woogi.setExpr('surprised');
-      await wsay('헐 대박, 우리 멍뭉이 영웅이네?');
+      await wsay(pick(['헐 대박, 우리 멍뭉이 영웅이네?', '박사원님 큰일 날 뻔했네! 멍뭉이 최고!', '꿈에서도 야근이라니… 고생했어 ㅠㅠ'], 5));
       mung.setPose('point');
-      await babble('버스에선 기사님이 쓰러지셔서 내가 버스를 세웠어!' + (f.msg === 0 ? ' 너한테 문자 보냈더니 아이스크림 사 온다 그랬고 ㅋㅋ' : '') + ' 근데 너도 나왔다? 아파트 앞에서 손 흔들어 줬어!');
+      await babble('버스에선 기사님이 쓰러지셔서 내가 버스를 세웠어!'
+        + ` 「${topic('bus2')}」 문제로 기사님도 살리고, 「${topic('bus3')}」 문제로 길도 찾았어.`
+        + (f.msg === 0 ? ' 너한테 문자 보냈더니 아이스크림 사 온다 그랬고 ㅋㅋ' : '') + ' 근데 너도 나왔다? 아파트 앞에서 손 흔들어 줬어!');
       woogi.setExpr('happy');
-      await wsay('꿈에서도 나 보러 왔구나~ 헤헤');
+      await wsay(pick(['꿈에서도 나 보러 왔구나~ 헤헤', '나도 나왔다니 기분 좋다 ㅎㅎ', '버스 운전까지? 못 하는 게 없네 ㅋㅋ'], 6));
       mung.setPose('think');
-      await babble((f.night === 1 ? '집에 와서 게임 한 판만 한다는 게 새벽 2시가 됐는데,' : '집에 와서 자는데 새벽 2시에 깼거든?') + ' 옆집 사람이 간첩인 줄 알았는데… 알고 보니 게임 성우였어!!');
+      await babble((f.night === 1 ? '집에 와서 게임 한 판만 한다는 게 새벽 2시가 됐는데,' : '집에 와서 자는데 새벽 2시에 깼거든?')
+        + ` 옆집 사람이 간첩인 줄 알았는데… 「${topic('apt3')}」 문제까지 풀어 보니까 알고 보니 게임 성우였어!!`);
+      await wsay(pick(['ㅋㅋㅋ 성우라니 반전이다', '간첩 아니라서 다행이다 ㅋㅋㅋ', '완전 추리왕 멍뭉이네~'], 7));
       await babble(`그리고 돌발 퀴즈도 ${env.state.popTotal}개 중에 ${env.state.popRight}개 맞혔다? 헥헥…`);
       woogi.setPose('cheeks'); woogi.setExpr('happyWink');
       await wsay('ㅋㅋㅋ 숨 좀 쉬고 말해~ 꿈에서도 열심히 살았네, 우리 멍뭉이. 그럼 오늘은 아무 생각 말고 놀자!');
@@ -197,10 +208,7 @@ export function build(env) {
       await walkTo(mung, -3.6, 4.0, 1.6);
       woogi.setPose('wave'); mung.setPose('wave');
       const mins = Math.round((performance.now() - env.state.startTime) / 60000);
-      const R = env.ROUNDS, cur = env.state.round, next = (cur + 1) % R;
-      const nextMsg = next === 0 ? `${R}개의 꿈을 모두 꿨어요! 다음엔 첫 번째 꿈부터 다시 시작해요.` : `다음엔 ${next + 1}번째 꿈 · 새로운 문제가 나와요!`;
-      env.markCleared();
-      const res = await ui.ending('💗 HAPPY END 💗', `알고 보니 다 꿈이었다!<br>멍뭉이는 우기와 데이트를 떠났습니다.<br><br><small>${cur + 1}번째 꿈 클리어 · 퀴즈 15문제<br>오답 ${env.state.wrongTotal}회 · 돌발 퀴즈 ${env.state.popRight}/${env.state.popTotal} · 플레이 약 ${mins}분<br>🌙 ${nextMsg}</small>`, [{ label: '다음 꿈 꾸기' }]);
+      const res = await ui.ending('💗 HAPPY END 💗', `알고 보니 다 꿈이었다!<br>멍뭉이는 우기와 데이트를 떠났습니다.<br><br><small>꿈속 퀴즈 15문제 클리어 · 오답 ${env.state.wrongTotal}회<br>돌발 퀴즈 ${env.state.popRight}/${env.state.popTotal} · 플레이 약 ${mins}분</small>`, [{ label: '🔄 게임 다시 시작하기' }, { label: '👋 게임 끝내기', sub: true }]);
       heartOn = false; hearts.forEach(h => (h.visible = false));
       return res;
     },

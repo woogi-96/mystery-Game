@@ -205,8 +205,6 @@ const env = {
   /* 돌발 퀴즈: 장면과 관련된 짧은 문제, 제한 시간 안에! (하트는 깎이지 않음) */
   getQuiz,
   ROUNDS,
-  /* 끝까지 클리어: 엔딩 화면이 뜨는 순간 다음 판으로 저장 (창을 닫아도 유지) */
-  markCleared() { advanceRound(); updateRoundBadge(); },
   get alt() { return state.round > 0; },
   async popQuiz(key, p0) {
     const p = getPop(key, p0);
@@ -364,7 +362,10 @@ async function runGame(fromEp = null) {
   const end = getScene(Ending, 'ending');
   if (result.clear) {
     const choice = await end.happy(env, getScene(Room, 'room'));
-    if (choice === 0) return runGame(null);
+    // "게임 다시 시작하기"를 눌렀을 때만 다음 판(새 문제)으로 넘어간다
+    if (choice === 0) { advanceRound(); return runGame(null); }
+    // "게임 끝내기": 처음 화면으로 (판은 그대로)
+    return showTitle();
   } else {
     const choice = await end.trapped(env, getScene(Room, 'room'), result.fail);
     if (choice === 0) return runGame(result.fail);
@@ -372,9 +373,17 @@ async function runGame(fromEp = null) {
   }
 }
 
-function updateRoundBadge() {
-  const el = document.getElementById('roundBadge');
-  if (el) el.textContent = `🌙 ${state.round + 1}번째 꿈 / ${ROUNDS} · 끝까지 깨면 다음 꿈은 새로운 문제!`;
+/* 처음 화면 다시 보이기 ("게임 끝내기") */
+function showTitle() {
+  ui.hud(false); ui.vignette(false); ui.clock(false);
+  const room = getScene(Room, 'room');
+  room.reset();
+  setScene(room);
+  cameraSet(room.shots.title);
+  const t = document.getElementById('title');
+  t.classList.remove('hidden');
+  t.style.opacity = 1;
+  ui.fadeOut(1.2);
 }
 
 /* ───────── 시작 ───────── */
@@ -385,7 +394,6 @@ async function boot() {
   setScene(room);
   cameraSet(room.shots.title);
   document.getElementById('loading').textContent = '';
-  updateRoundBadge();
   const btn = document.getElementById('startBtn');
   btn.disabled = false;
   btn.onclick = async () => {
