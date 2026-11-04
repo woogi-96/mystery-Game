@@ -309,7 +309,7 @@ export function build(env) {
   const shots = {
     wide: shot([3.5, 6.5, 13], [0, 1.8, -2], 50),
     seat: shot([4.2, 3.0, 4.6], [1.0, 1.7, -2.5], 48),
-    boardView: shot([1.5, 2.9, 3.2], [0, 2.8, -6], 52),
+    boardView: shot([3.6, 3.3, 3.4], [0.2, 2.8, -6], 52),
     pots: shot([-6.2, 3.0, 3.8], [-7.6, 1.8, -1.0], 50),
     clubWide: shot([CX + 1, 5.5, 10.5], [CX, 1.6, -1], 50),
     clubMid: shot([CX - 0.5, 3.0, 6.0], [CX + 0.5, 1.8, 0], 50),

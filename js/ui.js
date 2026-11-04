@@ -245,8 +245,10 @@ export const ui = {
     return new Promise(resolve => {
       const opts = $('askOptions');
       opts.innerHTML = '';
-      let timer = 0;
+      let timer = 0, closed = false;
       const close = i => {
+        if (closed) return; // 시간 초과와 클릭이 겹쳐도 한 번만 닫는다
+        closed = true;
         clearInterval(timer);
         box.classList.add('hidden');
         dlg.classList.add('hidden');
