@@ -84,7 +84,8 @@ function setScene(s) {
   if (s.onEnter) s.onEnter();
 }
 
-const state = { hearts: 3, ep: 0, quizIndex: 0, wrongTotal: 0, path: null, startTime: 0 };
+const state = { hearts: 3, ep: 0, quizIndex: 0, wrongTotal: 0, popRight: 0, popTotal: 0, path: null, startTime: 0, flags: {} };
+const who = name => (name === '멍뭉' ? mung : (current && current.cast && current.cast[name]) || null);
 
 const env = {
   THREE, camera, renderer, mung, woogi, ui, sfx, QUIZ,
@@ -102,7 +103,6 @@ const env = {
     const ep = EPISODES[state.ep];
     ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id), 3);
     const before = { pos: camBase.pos.clone(), look: camBase.look.clone(), fov: camBase.fov };
-    const who = name => (name === '멍뭉' ? mung : (current.cast && current.cast[name]) || null);
     const say = (name, text) => { const ch = who(name); return ui.say(name, text, { onTalk: () => { if (ch) ch.talk = Math.min(3.5, text.length * 0.06); } }); };
     const focus = name => {
       const f = name && current.focus && current.focus[name];
@@ -128,7 +128,7 @@ const env = {
         ui.toast('✔ 정답!', '#ffe08a');
         mung.setExpr('happy');
         await say(q.asker, q.explain);
-        await say(q.asker, '정리하면 → ' + q.chain.join(' → '));
+        if (q.chain && q.chain.length) await say(q.asker, '정리하면 → ' + q.chain.join(' → '));
         mung.setExpr('open');
         ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id) + 1, 3);
         return 'ok';
@@ -150,6 +150,40 @@ const env = {
       await say(q.asker, '음, 그건 아닌 것 같아. ' + q.hint);
       mung.setExpr('open');
     }
+  },
+
+  /* 대화 속 선택: 누군가 말을 걸면 팝업으로 멍뭉의 반응을 고른다 (정답 없음, 이야기만 달라짐) */
+  async choice(name, text, options) {
+    const ch = who(name);
+    if (ch) ch.talk = Math.min(2.5, text.length * 0.05);
+    ui.showLine(name, text);
+    const i = await ui.choose(options);
+    ui.hideDialog();
+    return i;
+  },
+
+  /* 돌발 퀴즈: 장면과 관련된 짧은 문제, 제한 시간 안에! (하트는 깎이지 않음) */
+  async popQuiz(p) {
+    const say = (name, text) => { const ch = who(name); return ui.say(name, text, { onTalk: () => { if (ch) ch.talk = Math.min(3.5, text.length * 0.06); } }); };
+    sfx.ring();
+    ui.toast('⚡ 돌발 퀴즈!', '#ffcc4d');
+    for (const [name, text] of p.lines || []) await say(name, text);
+    const pick = await ui.ask(p.asker, p.question, { title: p.title, options: p.options }, new Set(), { pop: true, time: p.time || 12 });
+    state.popTotal += 1;
+    if (pick === p.answer) {
+      state.popRight += 1;
+      sfx.correct();
+      ui.toast('🎉 돌발 퀴즈 정답!', '#ffe08a');
+      mung.setExpr('happy');
+      await say(p.asker, p.right);
+    } else {
+      sfx.wrong();
+      ui.toast(pick < 0 ? '⏰ 시간 초과!' : '😅 아쉽다!', '#ff9eb5');
+      mung.setExpr('sad');
+      await say(p.asker, (pick < 0 ? '땡! 시간 끝~ ' : '땡~ ') + p.wrong);
+    }
+    mung.setExpr('open');
+    return pick === p.answer;
   },
 
   /* 꿈과 꿈 사이 전환: 카메라가 빨려 들어가며 몽환 소용돌이 → 다음 꿈에서 빠져나옴 */
@@ -240,7 +274,7 @@ async function playEpisodes(from) {
     ui.clock(false);
     ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, 0, 3);
     ui.setHearts(state.hearts);
-    await env.dreamWarp(sc, sc.startShot(), { no: `DREAM ${ep.no}`, title: ep.title, sub: '난이도 하 → 중 → 상' });
+    await env.dreamWarp(sc, sc.startShot(), { no: `DREAM ${ep.no}`, title: ep.title, sub: ep.sub || '' });
     const res = await sc.play(env);
     if (res === 'fail') return { fail: i };
   }
@@ -248,7 +282,7 @@ async function playEpisodes(from) {
 }
 
 async function runGame(fromEp = null) {
-  state.wrongTotal = fromEp == null ? 0 : state.wrongTotal;
+  if (fromEp == null) { state.wrongTotal = 0; state.popRight = 0; state.popTotal = 0; state.flags = {}; }
   state.startTime = performance.now();
   ui.vignette(false);
   if (fromEp == null) {
@@ -304,6 +338,7 @@ async function boot() {
   btn.disabled = false;
   btn.onclick = async () => {
     sfx.unlock();
+    sfx.startMusic();
     document.getElementById('title').style.opacity = 0;
     setTimeout(() => document.getElementById('title').classList.add('hidden'), 1000);
     // 다른 씬들은 미리 만들어 둔다 (전환 때 끊김 방지)

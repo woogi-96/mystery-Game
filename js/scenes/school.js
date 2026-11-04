@@ -76,30 +76,30 @@ export function build(env) {
   });
   function boardBio() {
     drawBoard((g) => {
-      g.fillStyle = '#ffffff'; g.font = `56px ${FONT}`; g.fillText('🌱 생명과학개론 · 화분 실험 결과', 50, 80);
-      g.font = `38px ${FONT2}`;
-      g.fillStyle = '#ffe9a6'; g.fillText('통제 변인 vs 조작 변인', 60, 150);
-      g.fillStyle = '#ffffff';
-      ['A: 빛 O · 물 O', 'B: 빛 O · 물 X', 'C: 빛 X · 물 O', 'D: 빛 O · 물 O · 밀봉'].forEach((t, i) => g.fillText(t, 60 + (i % 2) * 520, 220 + Math.floor(i / 2) * 60));
-      g.fillStyle = '#ffb6c8'; g.font = `40px ${FONT}`; g.fillText('Q. C는 왜 노랗고 길쭉할까?', 60, 360);
+      g.fillStyle = '#ffffff'; g.font = `54px ${FONT}`; g.fillText('🌏 환경사회학 · 공유지의 비극', 50, 80);
+      // 호수 + 네 마을
+      g.fillStyle = '#4f86c6'; g.beginPath(); g.ellipse(330, 240, 230, 110, 0, 0, 7); g.fill();
+      g.fillStyle = '#ffffff'; g.font = `30px ${FONT}`;
+      [[90, 150, 'A마을'], [500, 150, 'B마을'], [90, 345, 'C마을'], [500, 345, 'D마을']].forEach(([x, y, t]) => g.fillText(t, x, y));
+      g.font = `34px ${FONT}`;
+      [[230, 230], [300, 270], [380, 215], [430, 280], [260, 290]].forEach(([x, y]) => g.fillText('🚤', x, y));
+      // 물고기 수 그래프
+      g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.strokeRect(720, 120, 420, 230);
+      g.fillStyle = '#ffe9a6'; g.font = `28px ${FONT2}`; g.fillText('물고기 수 (만 마리)', 730, 112);
+      [180, 160, 130, 95, 60].forEach((v, i) => { g.fillStyle = '#9fd8ff'; g.fillRect(745 + i * 80, 345 - v, 50, v); g.fillStyle = '#fff'; g.font = `22px ${FONT2}`; g.fillText(`${2021 + i}`, 742 + i * 80, 372); });
       g.fillStyle = '#fff'; g.font = `26px ${FONT2}`; g.fillText('Week 10', 50, 390);
     });
   }
   function boardMath() {
     drawBoard((g) => {
-      g.fillStyle = '#ffffff'; g.font = `54px ${FONT}`; g.fillText('📊 통계학 · 베이즈 정리와 기저율', 50, 80);
-      g.font = `36px ${FONT2}`;
-      g.fillText('유병률  P(병) = 1%', 60, 150);
-      g.fillText('민감도  P(양성 | 병) = 90%', 60, 205);
-      g.fillText('위양성률  P(양성 | 건강) = 9%', 60, 260);
-      g.fillStyle = '#ffe9a6'; g.font = `42px ${FONT}`; g.fillText('P(병 | 양성) = ?', 60, 340);
-      // 1000명 도식
-      g.strokeStyle = '#fff'; g.lineWidth = 3;
-      g.strokeRect(720, 120, 420, 240);
-      g.fillStyle = '#ffffff'; g.font = `30px ${FONT2}`; g.fillText('1,000명', 870, 160);
-      g.fillStyle = '#ff9eb5'; g.fillRect(740, 190, 40, 150);
-      g.fillStyle = '#9fd8ff'; g.fillRect(800, 190, 320, 150);
-      g.fillStyle = '#23305a'; g.font = `26px ${FONT}`; g.fillText('10', 745, 270); g.fillText('990', 930, 270);
+      g.fillStyle = '#ffffff'; g.font = `54px ${FONT}`; g.fillText('♻️ 환경경제학 · 연비의 역설', 50, 80);
+      g.font = `38px ${FONT2}`;
+      g.fillText('🚗 평균 연비      +30%', 60, 170);
+      g.fillStyle = '#ff9eb5'; g.fillText('⛽ 휘발유 소비량  +10% ?!', 60, 235);
+      g.fillStyle = '#ffffff'; g.fillText('🛣️ 주말 장거리 운전 ↑', 60, 300);
+      g.fillText('🚌 버스 이용객 ↓', 60, 360);
+      g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(720, 120, 420, 240);
+      g.fillStyle = '#ffe9a6'; g.font = `34px ${FONT}`; g.fillText('효율 ↑  →  ???  →  소비 ↑', 745, 250);
     });
   }
   boardBio();
@@ -246,19 +246,20 @@ export function build(env) {
   box(0.1, 0.5, 0.1, '#333', { pos: [0, 1.5, -0.3], parent: pcDesk });
   rbox(1.9, 1.15, 0.08, 0.03, '#1b1c22', { pos: [0, 2.3, -0.3], parent: pcDesk });
   const gitScreen = texPlane(1.8, 1.05, 520, 300, () => {}, { glow: 0.8, pos: [0, 2.3, -0.255], parent: pcDesk });
-  function drawGit(restored) {
+  function drawGit(done) {
+    // 동아리방 모니터: 넌센스 퀴즈 대회 점수판
     gitScreen.tex.redraw((g, w, h) => {
-      g.fillStyle = '#101218'; g.fillRect(0, 0, w, h);
-      g.font = `20px monospace`;
-      const lines = restored ? [
-        ['$ git push origin main', '#ddd'], ['  (하린의 최신 로컬에서)', '#888'], ['+ 7c1e9a2...f3b88d1 main -> main', '#7cf5c4'],
-        ['', ''], ['$ git log --oneline | wc -l', '#ddd'], ['128', '#7cf5c4'], ['', ''], ['🔒 Branch protection: main', '#ffd34d'], ['   force push: BLOCKED', '#ffd34d'], ['✔ 빌드 복구 완료!', '#7cf5c4'],
-      ] : [
-        ['$ git reflog show origin/main', '#ddd'], ['23:47  forced-update', '#ff6b6b'], ['  7c1e9a2 (2주 전) ← f3b88d1', '#ff9a9a'],
-        ['', ''], ['$ git log --oneline | wc -l', '#ddd'], ['41   (어제: 128)', '#ff6b6b'], ['', ''], ['user: club-admin @ 공용PC', '#9fd8ff'],
-        ['last pull: 14 days ago', '#ffd34d'], ['! [rejected] → --force', '#ff6b6b'],
-      ];
-      lines.forEach(([t, c], i) => { g.fillStyle = c; g.fillText(t, 14, 30 + i * 27); });
+      g.fillStyle = '#1b1530'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#ffd34d'; g.font = `30px ${FONT}`; g.fillText('🏆 넌센스 퀴즈 대회', 14, 40);
+      g.font = `22px ${FONT2}`;
+      const rows = [['하린', 2], ['도윤', 0], ['서준', 1], ['지우', 2], ['멍뭉', done ? 3 : 0]];
+      rows.forEach(([n, v], i) => {
+        g.fillStyle = n === '멍뭉' ? '#7cf5c4' : '#ddd';
+        g.fillText(n, 20, 90 + i * 34);
+        g.fillStyle = n === '멍뭉' ? '#7cf5c4' : '#9fd8ff';
+        g.fillRect(100, 74 + i * 34, 40 + v * 50, 20);
+      });
+      g.fillStyle = '#ff9eb5'; g.font = `20px ${FONT}`; g.fillText('우승 상품: 축제 간식 쿠폰 🍡', 14, h - 18);
     });
   }
   drawGit(false);
@@ -352,32 +353,62 @@ export function build(env) {
       const T = teacher;
       // 방에서 잠든 멍뭉 → 꿈속에서도 책상에 엎드려 자고 있다
       await ui.caption('☀ 오전 10시 · 꿈나라대학교 공학관 301호', 1.8);
-      T.setPose('point');
-      await say(T, '교수님', '멍뭉 학생! 출석 부를 때 자고 있으면 결석이에요~');
-      mung.setPose('sitChair'); mung.setExpr('surprised');
-      env.shake(0.08);
-      await say(mung, '멍뭉', '……헉! 어? 대학교 강의실…? 분명 방에서 자고 있었는데…?');
-      mung.setExpr('open');
-      await say(students[3] || students[0], '옆자리 친구', '(속닥) 멍뭉아, 너 코까지 골았어 ㅋㅋ 오늘 생명과학 실험 결과 발표날이야.');
-      await say(mung, '멍뭉', '(이거 완전 꿈이다… 그래도 수업은 들어야지.)');
-      await env.cameraTo(shots.wide, 1.6);
-      T.setPose('point');
-      await env.cameraTo(shots.pots, 1.8);
+      const friend = students[3] || students[0];
+      // 출석 부르기 (선택)
       T.setPose('idle');
+      await say(T, '교수님', '자, 출석 부를게요. 김하늘? "네~" 박도현? "네!"');
+      T.setPose('point');
+      const attend = await env.choice('교수님', '……멍뭉 학생? 멍뭉 학생 왔어요?', [
+        { label: '🙋 "네!!" 하고 벌떡 일어난다', sub: '목소리가 좀 잠겨 있다' },
+        { label: '😴 계속 자는 척한다', sub: '5분만… 5분만 더…' },
+      ]);
+      env.state.flags.attend = attend;
+      if (attend === 0) {
+        mung.setPose('cheer'); mung.setExpr('surprised');
+        env.shake(0.08);
+        await say(mung, '멍뭉', '네, 넵!! 여기 있습니다!!');
+        students.forEach(c => c.setExpr('happy'));
+        emote(scene, friend, 'ㅋㅋㅋ', 2);
+        await say(T, '교수님', '목소리 완전 잠겼네요 ㅋㅋ 출석 인정! 대신 오늘 질문은 멍뭉 학생한테 할 거예요~');
+        mung.setPose('sitChair'); mung.setExpr('open');
+        await say(mung, '멍뭉', '(…어? 여기 대학교 강의실이잖아? 분명 방에서 자고 있었는데…)');
+      } else {
+        await say(T, '교수님', '멍뭉 학생 결석 처리… 할까요?');
+        emote(scene, friend, '!', 1.5);
+        await say(friend, '옆자리 친구', '(쿡쿡 찌르며) 야, 멍뭉아! 일어나! 교수님이 너 결석 처리한대!');
+        mung.setPose('sitChair'); mung.setExpr('surprised'); env.shake(0.08);
+        await say(mung, '멍뭉', '……헉! 여기 있어요!! 있습니다!!');
+        T.setPose('idle');
+        await say(T, '교수님', '자는 척하는 거 위에서 다 보여요~ 이번만 지각으로 해 줄게요. 대신 오늘 질문은 전부 멍뭉 학생 담당!');
+        students.forEach(c => c.setExpr('happy'));
+        await say(mung, '멍뭉', '(으앙… 근데 여기 대학교 강의실이잖아? 분명 방에서 자고 있었는데…)');
+      }
+      mung.setExpr('open');
+      await say(friend, '옆자리 친구', '(속닥) 오늘 환경사회학 진도 나가는 날이야. 공유지 어쩌구~');
+      await env.cameraTo(shots.boardView, 1.6);
+      T.setPose('point');
       if (await env.quiz('school1') === 'fail') return 'fail';
       mk.hide();
 
+      // 돌발 퀴즈
       await env.cameraTo(shots.seat, 1.2);
       T.setPose('cheer');
-      await say(T, '교수님', '좋아요! 변인 통제를 제대로 이해했군요. 그럼 2교시 통계학으로 넘어갈게요.');
+      await env.popQuiz({
+        asker: '교수님', title: '돌발 퀴즈 · 환경 용어',
+        lines: [['교수님', '좋아요! 그럼 분위기 탄 김에 돌발 퀴즈! 10초 안에 대답해요~']],
+        question: '배출한 온실가스만큼 흡수하거나 줄여서, 실질 배출량을 "0"으로 만드는 것을 뭐라고 하죠?',
+        options: ['탄소발자국', '탄소중립', '탄소배출권', '탄소포집'],
+        answer: 1, time: 10,
+        right: '정답! 탄소중립(넷제로)이에요. 우리나라도 2050년 탄소중립이 목표예요.',
+        wrong: '정답은 "탄소중립"! 탄소발자국은 내가 배출한 양을 재는 거고요~',
+      });
       T.setPose('idle');
       await env.cut(async () => { boardMath(); env.cameraSet(shots.boardView); });
-      await ui.caption('📊 11시 · 통계학 강의', 1.4);
-      await say(T, '교수님', '이 문제는 수강생 대부분이 틀려요. 직관 말고 숫자를 믿으세요.');
+      await ui.caption('♻️ 11시 · 환경경제학', 1.4);
+      await say(T, '교수님', '이번 건 꽤 많은 학생이 틀려요. "좋은 일 = 좋은 결과"라고 단정하지 마세요.');
       students.slice(0, 4).forEach(s => s.setPose('cheer'));
-      emote(scene, students[1], '90%!', 2);
-      emote(scene, students[3], '90%!!', 2);
-      await say(null, '학생들', '90%요!! 검사 정확도가 90%니까요!');
+      emote(scene, students[1], '연비 짱!', 2);
+      await say(null, '학생들', '연비가 좋아졌으면 당연히 기름을 덜 쓰는 거 아니에요?');
       students.forEach(s => s.setPose('sitChair'));
       if (await env.quiz('school2') === 'fail') return 'fail';
 
@@ -389,37 +420,48 @@ export function build(env) {
         env.cameraSet(shots.clubWide);
       }, '#fff');
       walkTo(mung, CX - 3.0, 3.4, 2.2, Math.PI - 0.6);
-      emote(scene, harin, '💢', 2.5); emote(scene, doyun, '💢', 2.5);
-      await say(harin, '하린', '도윤! 네가 어제 마지막까지 남아 있었잖아. 네가 지운 거지?!');
-      await say(doyun, '도윤', '무슨 소리야! 난 노트북 꺼져서 아무것도 못 했어. 서준이 마지막에 사운드 올렸잖아!');
-      emote(scene, seojun, '😤', 2);
-      await say(seojun, '서준', '나 11시에 학원 갔거든?! 왜 나한테 그래!');
-      emote(scene, jiwoo, '…', 2.5);
-      await say(jiwoo, '지우', '……');
+      [harin, doyun, seojun, jiwoo].forEach(c => c.setExpr('happy'));
+      emote(scene, harin, '🎉', 2.5);
+      await say(harin, '하린', '멍뭉 왔다! 딱 맞춰 왔네. 지금 넌센스 퀴즈 대회 시작하려던 참이야!');
+      // 간식 (선택)
+      const snack = await env.choice('서준', '멍뭉아, 퀴즈 전에 이거 먹을래? 내가 만든 "민트초코 떡볶이"…', [
+        { label: '😋 일단 먹어 본다', sub: '도전 정신!' },
+        { label: '🙅 정중하게 사양한다', sub: '오늘 컨디션이…' },
+      ]);
+      env.state.flags.snack = snack;
+      if (snack === 0) {
+        mung.setExpr('surprised'); emote(scene, mung, '…!', 2);
+        await say(mung, '멍뭉', '……음? 어? 생각보다… 괜찮은데?! 아니 이상한데 자꾸 손이 가!');
+        emote(scene, seojun, '😎', 2);
+        await say(seojun, '서준', '그치?! 역시 멍뭉이는 뭘 좀 알아. 축제 메뉴로 낸다!');
+        await say(doyun, '도윤', '(속닥) 멍뭉아… 너 그거 진심이야…?');
+      } else {
+        await say(mung, '멍뭉', '아… 나 오늘 위가 좀 예민해서. 다음에 꼭 먹을게!');
+        seojun.setExpr('sad'); emote(scene, seojun, '💧', 2);
+        await say(seojun, '서준', '흑… 다들 이러더라. 이게 얼마나 맛있는데…');
+        await say(jiwoo, '지우', '(속닥) 잘했어. 나 아까 먹고 10분 동안 말 못 했어.');
+      }
+      mung.setExpr('open');
       await env.cameraTo(shots.clubMid, 1.2);
-      mung.setPose('cheer');
-      await say(mung, '멍뭉', '잠깐잠깐! 다들 진정하고. 감정 말고 "기록"부터 같이 보자.');
       mung.setPose('think');
       if (await env.quiz('school3') === 'fail') return 'fail';
       mk.hide();
 
+      // 돌발 넌센스
       mung.setPose('idle');
-      jiwoo.setExpr('sad');
-      await env.cameraTo(shots.clubMid, 1.2);
-      await say(jiwoo, '지우', '미안해… push가 거절되길래 "강제로" 올리면 되는 줄 알았어. 그게 다 덮어쓰는 거였구나…');
-      harin.setPose('idle'); harin.setExpr('open');
-      await say(harin, '하린', '…나도 미안. 도윤이 의심해서. 내 노트북에 최신 버전 있어! 지금 바로 올릴게.');
-      env.cameraTo(focus.gitlog, 1.2);
-      await wait(1.0);
+      await env.popQuiz({
+        asker: '지우', title: '돌발 넌센스 · 개발자 편',
+        lines: [['지우', '잠깐! 보너스 문제 하나 더! 우리 동아리 맞춤형이야. 빨리 대답해!']],
+        question: '개발자가 세상에서 제일 싫어하는 벌레는?',
+        options: ['모기', '바퀴벌레', '버그', '개미'],
+        answer: 2, time: 8,
+        right: '딩동댕! 버그! 우리 축제 게임에도 버그가 없어야 할 텐데…',
+        wrong: '정답은 "버그"! 개발자한테 제일 무서운 벌레지~',
+      });
       drawGit(true);
-      dLap.scr.material = emissive('#8fd0ff', 0.6);
-      sfx.correct();
-      await wait(1.2);
-      await env.cameraTo(shots.clubMid, 1.2);
       [harin, doyun, seojun, jiwoo, mung].forEach(c => { c.setPose('cheer'); c.setExpr('happy'); });
-      await say(doyun, '도윤', '복구됐다!! 그리고 main 브랜치에 force push 금지 걸어놨어. 이제 이런 일 없을 거야!');
-      await say(harin, '하린', '멍뭉아 고마워! 너 오늘 오후에 회사 출근이지? 조심히 가~');
-      await say(mung, '멍뭉', '응! 출근 전에 집 가는 길에 공원 좀 걷다 가려고. 다들 내일 축제 파이팅!');
+      await say(harin, '하린', '우승은 멍뭉! 축제 간식 쿠폰 여기~ 너 오늘 오후에 회사 출근이지? 조심히 가~');
+      await say(mung, '멍뭉', '고마워! 출근 전에 집 가는 길에 공원 좀 걷다 가려고. 다들 내일 축제 파이팅!');
       mung.setPose('idle'); mung.setExpr('happy');
       // 동아리방 문을 열고 나가면 → 공원
       env.cameraTo(shot([CX - 1.5, 2.6, 5.5], [CX - 5.6, 1.8, 2.5], 48), 1.6);

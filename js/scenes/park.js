@@ -419,6 +419,18 @@ export function build(env) {
       await say(ranger, '관리인 아저씨', '어이 학생! 자네도 봤나? 아침에 출근해 보니 이 동굴이 생겨 있지 뭔가.');
       await say(mung, '멍뭉', '보랏빛이 새어 나와요… 궁금해서 못 참겠어요. 같이 살짝만 들어가 봐요!');
       await say(ranger, '관리인 아저씨', '허허, 나도 확인은 해야 하니… 조심해서 따라오게.');
+      const light = await env.choice('관리인 아저씨', '안이 꽤 어두워 보이는데, 준비는 됐나?', [
+        { label: '🔦 휴대폰 손전등을 켠다', sub: '배터리 23%…' },
+        { label: '😎 그냥 들어간다', sub: '눈이 금방 적응하겠지!' },
+      ]);
+      env.state.flags.light = light;
+      if (light === 0) {
+        await say(mung, '멍뭉', '손전등 켰어요! 발밑 조심하세요, 아저씨.');
+        await say(ranger, '관리인 아저씨', '오, 준비성 좋구먼! 요즘 젊은이 답지 않게 든든해.');
+      } else {
+        await say(mung, '멍뭉', '괜찮아요, 금방 적응될 거예요— 아얏! 돌부리!!');
+        await say(ranger, '관리인 아저씨', '허허, 그러게 내가 뭐랬나. 내 랜턴 불빛 따라오게.');
+      }
       walkTo(ranger, 0.9, -11.8, 2.2);
       await walkTo(mung, 0, -11.6, 2.2);
       await env.cameraTo(shots.caveIn, 1.4);
@@ -445,6 +457,15 @@ export function build(env) {
       await say(mung, '멍뭉', '길은 세 갈래네요. 바위 위에 촛불 하나가 켜져 있어요.');
       if (await env.quiz('cave1') === 'fail') return 'fail';
       mk.hide();
+      await env.popQuiz({
+        asker: '관리인 아저씨', title: '돌발 퀴즈 · 동굴 상식',
+        lines: [['관리인 아저씨', '가만, 천장 좀 보게. 고드름 같은 돌이 주렁주렁하구먼. 자네, 이거 이름 아나?']],
+        question: '석회 동굴 천장에서 고드름처럼 아래로 자라는 돌은?',
+        options: ['석순', '석주', '종유석', '현무암'],
+        answer: 2, time: 10,
+        right: '그렇지! 종유석이여. 바닥에서 위로 자라는 건 석순, 둘이 만나면 석주가 되지.',
+        wrong: '정답은 종유석이여. 바닥에서 솟는 건 석순이고, 둘이 붙으면 석주라네.',
+      });
 
       walkTo(ranger, 4.4, -6.2, 2.4);
       await walkTo(mung, 5.5, -6.8, 2.4);

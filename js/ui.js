@@ -72,7 +72,16 @@ export const ui = {
     el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
   },
   letterbox(on) { $('letterbox').classList.toggle('on', on); },
-  hideDialog() { $('dialog').classList.add('hidden'); },
+  /* 대사창에 한 줄 띄워 두기 (클릭 대기 없이) — 선택지와 함께 쓴다 */
+  showLine(name, text) {
+    const dlg = $('dialog');
+    dlg.classList.remove('hidden');
+    $('dlgName').textContent = name || '';
+    $('dlgName').className = (name || '') in NAME_CLASS ? NAME_CLASS[name || ''] : 'npc';
+    $('dlgText').textContent = text;
+    $('dlgNext').style.visibility = 'hidden';
+  },
+  hideDialog() { $('dlgNext').style.visibility = ''; $('dialog').classList.add('hidden'); },
 
   choose(opts) {
     const box = $('choices');
@@ -211,15 +220,21 @@ export const ui = {
     });
   },
   /* 대화 중 질문: 대사창에는 질문, 그 위에 선택지 팝업 */
-  ask(name, question, q, disabled = new Set()) {
+  /* o.pop = 돌발 퀴즈(제한 시간 o.time초, 시간 초과면 -1) */
+  ask(name, question, q, disabled = new Set(), o = {}) {
     const box = $('ask');
-    $('askLevel').textContent = `난이도 ${q.level}`;
-    $('askLevel').className = 'lvl ' + ({ '하': 'l1', '중': 'l2', '상': 'l3' }[q.level]);
+    box.classList.toggle('pop', !!o.pop);
+    $('askLevel').textContent = o.pop ? '⚡ 돌발 퀴즈' : '';
+    $('askLevel').className = o.pop ? 'lvl l3' : 'lvl hidden';
     $('askTitle').textContent = q.title;
     const memo = $('askMemo');
-    memo.innerHTML = q.clues.map(c => `<li>${c.text}</li>`).join('');
+    const clues = q.clues || [];
+    memo.innerHTML = clues.map(c => `<li>${c.text}</li>`).join('');
     memo.classList.add('hidden');
+    $('askMemoBtn').style.display = clues.length ? '' : 'none';
     $('askMemoBtn').onclick = () => { sfx.click(); memo.classList.toggle('hidden'); };
+    const bar = $('askTimer');
+    bar.style.display = o.pop ? '' : 'none';
     // 대사창에 질문 표시 (클릭으로 넘어가지 않음)
     const dlg = $('dialog');
     dlg.classList.remove('hidden');
@@ -230,17 +245,30 @@ export const ui = {
     return new Promise(resolve => {
       const opts = $('askOptions');
       opts.innerHTML = '';
+      let timer = 0;
+      const close = i => {
+        clearInterval(timer);
+        box.classList.add('hidden');
+        dlg.classList.add('hidden');
+        $('dlgNext').style.visibility = '';
+        resolve(i);
+      };
+      if (o.pop) {
+        const t0 = performance.now(), T = (o.time || 10) * 1000;
+        const fill = bar.firstElementChild;
+        timer = setInterval(() => {
+          const left = Math.max(0, T - (performance.now() - t0));
+          fill.style.width = (left / T * 100) + '%';
+          fill.textContent = Math.ceil(left / 1000) + '초';
+          if (left <= 0) close(-1);
+        }, 100);
+      }
       q.options.forEach((text, i) => {
         const b = document.createElement('button');
         b.type = 'button';
         b.innerHTML = `<b>${'ABCD'[i]}</b><span>${text}</span>`;
         b.disabled = disabled.has(i);
-        b.onclick = () => {
-          box.classList.add('hidden');
-          dlg.classList.add('hidden');
-          $('dlgNext').style.visibility = '';
-          resolve(i);
-        };
+        b.onclick = () => close(i);
         opts.appendChild(b);
       });
       box.classList.remove('hidden');

@@ -332,6 +332,37 @@ export function build(env) {
       await walkTo(mung, 0.5, 4.4, 3.0);
       place(scene, mung, [0.5, 0.38, 3.4], Math.PI, 'type');
       await env.cameraTo(shots.desk, 1.6);
+      // 오후 업무
+      const boss = crew['김팀장'];
+      await say(boss, '김팀장', '멍뭉 왔나! 오늘 배포날인데 일이 좀 몰렸어.');
+      if (await env.quiz('office1') === 'fail') return 'fail';
+      mk.hide();
+      await env.cameraTo(shots.desk, 1.0);
+      // 커피 심부름 (선택)
+      const coffee = await env.choice('이대리', '저 1층 카페 가는데~ 멍뭉님 커피 뭐 드릴까요?', [
+        { label: '☕ "아이스 아메리카노 샷 추가요!"', sub: '오늘 야근각이다…' },
+        { label: '🍵 "괜찮아요, 저 물 마실게요"', sub: '오늘은 카페인 줄이기' },
+      ]);
+      env.state.flags.coffee = coffee;
+      if (coffee === 0) {
+        await say(crew['이대리'], '이대리', '샷 추가… 오늘 야근 각이네요 ㅋㅋ 알겠어요!');
+        await say(mung, '멍뭉', '(왠지 불길한 예감이…)');
+      } else {
+        await say(crew['이대리'], '이대리', '오~ 건강 챙기시네. 그럼 제가 대신 샷 추가할게요 ㅋㅋ');
+      }
+      if (await env.quiz('office2') === 'fail') return 'fail';
+      mk.hide();
+      await say(crew['박사원'], '박사원', '살았다! 폰부스 예약해 두고 모니터에 메모 붙여 놨어요. "21:30 폰부스 LA 화상회의"!');
+      // 돌발 퀴즈
+      await env.popQuiz({
+        asker: '오선임', title: '돌발 퀴즈 · 회사 용어',
+        lines: [['오선임', '아 맞다 정인턴, 아까 메일 보고 물어봤던 거! 멍뭉님, 돌발 퀴즈로 대신 대답해 주세요!']],
+        question: '업무 메일에 자주 나오는 "ASAP"은 무슨 뜻일까?',
+        options: ['As Soon As Possible (가능한 한 빨리)', 'After Sales And Purchase (판매 후 구매)', 'All Staff Attend Please (전원 참석)', 'Ask Someone Another Plan (다른 사람에게 물어봐)'],
+        answer: 0, time: 10,
+        right: '정답! "가능한 한 빨리"요. 정인턴, 메모해 둬요~',
+        wrong: '정답은 As Soon As Possible, "가능한 한 빨리"예요!',
+      });
       await ui.caption('⏩ 오후 내내 개발하고, 야근까지… 밤 9시 32분', 2.2);
       await say(mung, '멍뭉', '배포 끝! 이제 완료 메일만 보내면 퇴근이다…!');
       await env.cameraTo(shots.screen, 1.4);
@@ -350,10 +381,21 @@ export function build(env) {
       mung.setPose('panic'); mung.setExpr('surprised');
       await say(null, '동료들', '으악! 정전이야?! 아무것도 안 보여!!');
       sfx.alarm();
-      await say(mung, '멍뭉', '메…메일은?! … 아니, 지금 그게 중요한 게 아니지.');
       mung.setPose('idle'); mung.setExpr('open');
-      if (await env.quiz('office1') === 'fail') return 'fail';
-      mk.hide();
+      const mail = await env.choice('멍뭉', '(노트북은 배터리로 켜져 있다… 어떡하지?)', [
+        { label: '📧 노트북으로 메일부터 마저 보낸다', sub: '딱 10초면 되는데…' },
+        { label: '🚨 바로 "다들 계단으로!" 외친다', sub: '메일은 나중에' },
+      ]);
+      env.state.flags.mail = mail;
+      if (mail === 0) {
+        mung.setPose('type');
+        await say(mung, '멍뭉', '보내기… 보내기… 어? 와이파이가 안 잡혀!');
+        await say(crew['김팀장'], '김팀장', '멍뭉! 메일은 나중에! 정전 원인도 모르는데 사람이 먼저야!');
+        await say(mung, '멍뭉', '아, 넵!! 죄송합니다!');
+      } else {
+        await say(crew['김팀장'], '김팀장', '좋아, 침착하군! 엘리베이터는 타면 안 돼. 유도등 따라가자.');
+      }
+      mung.setPose('idle');
 
       await walkTo(mung, -1.5, 6.0, 2.6);
       mung.setPose('cheer');
@@ -369,8 +411,9 @@ export function build(env) {
       await say(mung, '멍뭉', '삑— … 어? 카드를 찍었는데 문이 안 열려!');
       upsLeft = 6; drawUps(true);
       await say(crew['이대리'], '이대리', '정전이면 원래 문이 열리는 거 아니었어?!');
-      if (await env.quiz('office2') === 'fail') return 'fail';
-      mk.hide();
+      env.cameraTo(focus.breakglass, 1);
+      await say(crew['정인턴'], '정인턴', '여기 초록 박스에 "비상 시 덮개를 깨고 누르시오 — 잠금 전원 차단"이라고 쓰여 있어요!');
+      await say(mung, '멍뭉', '이 문은 전기가 있어야 잠기는 자석식이야. 전원만 끊으면 돼!');
 
       env.cameraTo(focus.breakglass, 1);
       await wait(0.8);

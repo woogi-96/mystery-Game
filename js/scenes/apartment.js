@@ -199,14 +199,21 @@ export function build(env) {
       await walkTo(mung, -12.0, 0.8, 2.0);
       anim(0.9, k => elevDoors.forEach(d => (d.position.z = Math.sign(d.position.z) * (1.45 - k * 0.95))));
       await env.cameraTo(shots.elev, 1.4);
-      await say(mung, '멍뭉', '휴, 드디어 집이다… 우기 얼굴 보니까 피곤이 싹 풀리네. 내일 데이트니까 씻고 푹 자야지.');
+      await say(mung, '멍뭉', '휴, 드디어 집이다… 우기 얼굴 보니까 피곤이 싹 풀리네.');
+      const night = await env.choice('멍뭉', '(내일 데이트인데… 이제 뭐 하지?)', [
+        { label: '🚿 바로 씻고 잔다', sub: '꿀잠 예약' },
+        { label: '🎮 게임 딱 한 판만 하고 잔다', sub: '진짜 한 판만…' },
+      ]);
+      env.state.flags.night = night;
+      if (night === 0) await say(mung, '멍뭉', '내일을 위해 일찍 자자. 오늘은 진짜 꿀잠 잘 수 있겠다~');
+      else await say(mung, '멍뭉', '딱 한 판만! …진짜 딱 한 판만이야.');
       // 새벽 2시, 옆집 소리에 깨서 복도로
       await env.cut(async () => {
         place(scene, mung, [-3.5, 0, 0.6], Math.PI / 2, 'idle', 'sleepy');
         place(scene, guard, [5.8, 0, 1.0], -Math.PI / 2, 'idle');
         env.cameraSet(shots.hall);
       });
-      await ui.caption('⏩ 새벽 2시 · 옆집 소리에 잠이 깼다', 1.8);
+      await ui.caption(night === 0 ? '⏩ 새벽 2시 · 옆집 소리에 잠이 깼다' : '⏩ 새벽 2시 · 한 판이 열 판이 됐을 때… 옆집에서 소리가 들린다', 1.8);
       const voice = textSprite('🎙 "Good morning, team!"', { size: 54, scale: 0.32, border: '#a8c8ff' });
       voice.position.set(2.5, 3.2, -1.4); scene.add(voice);
       sfx.blip();
@@ -216,7 +223,16 @@ export function build(env) {
       await say(mung, '멍뭉', '1004호…? 새벽 2시에 "좋은 아침"이라니. 말투도 이상하고, 새벽에만 움직이고… 설마 간첩?');
       mung.setExpr('open');
       await walkTo(guard, 4.0, 1.1, 1.8, -Math.PI / 2);
-      await say(guard, '경비 아저씨', '학생도 나왔구먼. 나도 순찰 돌다가 저 집이 하도 수상해서 말이야.');
+      await say(guard, '경비 아저씨', '학생도 나왔구먼. 나도 분리수거장 정리하고 순찰 돌다가 저 집이 하도 수상해서 말이야.');
+      await env.popQuiz({
+        asker: '경비 아저씨', title: '돌발 퀴즈 · 분리수거',
+        lines: [['경비 아저씨', '아 참, 그 전에! 누가 또 기름 범벅 피자 박스를 종이류에 넣었더라고. 학생은 알지?']],
+        question: '치즈랑 기름이 잔뜩 묻은 피자 박스는 어디에 버려야 할까요?',
+        options: ['종이류', '플라스틱류', '일반 쓰레기 (종량제 봉투)', '음식물 쓰레기'],
+        answer: 2, time: 10,
+        right: '역시! 기름이나 음식물이 묻은 종이는 재활용이 안 돼서 종량제 봉투로! 깨끗한 부분만 잘라 종이류로 내면 더 좋고.',
+        wrong: '정답은 일반 쓰레기여. 기름 묻은 종이는 재활용 공정을 망쳐서 종량제 봉투에 버려야 하네.',
+      });
       if (await env.quiz('apt1') === 'fail') return 'fail';
       mk.hide();
       scene.remove(voice);

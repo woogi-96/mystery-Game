@@ -310,6 +310,28 @@ export function build(env) {
       anim(2.5, k => (speed = 40 * k));
       await env.cameraTo(shots.side, 2);
       await say(mung, '멍뭉', '퇴근 버스~ 우기가 10시 반까지 우리 아파트 앞에 잠깐 와 있겠다고 했지. 헤헤.');
+      const msg = await env.choice('멍뭉', '(우기한테 연락할까?)', [
+        { label: '📱 "나 지금 버스 탔어!" 문자 보낸다', sub: '' },
+        { label: '🎧 이어폰 끼고 노래 듣는다', sub: '도착해서 깜짝 등장!' },
+      ]);
+      env.state.flags.msg = msg;
+      if (msg === 0) {
+        sfx.blip();
+        await say(null, '우기 (문자)', '오 빨리 왔네! 나 편의점에서 아이스크림 사 갈게 🍦');
+        await say(mung, '멍뭉', '헤헤, 아이스크림…');
+      } else {
+        await say(mung, '멍뭉', '(창밖 야경 보면서 노래 듣는 이 시간이 제일 좋아…)');
+      }
+      // 돌발 퀴즈
+      await say(student, '대학생', '(중얼중얼) 아… 내일 운전면허 필기 시험인데… 저기요, 혹시 이거 아세요?');
+      await env.popQuiz({
+        asker: '대학생', title: '돌발 퀴즈 · 교통 상식',
+        question: '버스 전용차로를 표시하는 차선 색깔은 무슨 색일까요?',
+        options: ['노란색', '흰색', '파란색', '빨간색'],
+        answer: 2, time: 10,
+        right: '파란색! 맞다, 이제 기억났어요. 감사합니다!',
+        wrong: '아… 책 보니까 파란색이래요. 하나 배웠네요!',
+      });
       // 노선 이탈
       wobble = 0.6;
       ledText = '⚠ 노선 이탈 ⚠  ⚠ 노선 이탈 ⚠'; ledColor = '#ff4040';

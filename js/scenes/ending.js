@@ -169,7 +169,7 @@ export function build(env) {
       await walkTo(mung, -3.6, 4.0, 1.6);
       woogi.setPose('wave'); mung.setPose('wave');
       const mins = Math.round((performance.now() - env.state.startTime) / 60000);
-      const res = await ui.ending('💗 HAPPY END 💗', `알고 보니 다 꿈이었다!<br>멍뭉이는 우기와 데이트를 떠났습니다.<br><br><small>꿈속 퀴즈 15문제 클리어 · 오답 ${env.state.wrongTotal}회 · 플레이 약 ${mins}분</small>`, [{ label: '처음부터 다시 꿈꾸기' }]);
+      const res = await ui.ending('💗 HAPPY END 💗', `알고 보니 다 꿈이었다!<br>멍뭉이는 우기와 데이트를 떠났습니다.<br><br><small>꿈속 퀴즈 15문제 클리어 · 오답 ${env.state.wrongTotal}회 · 돌발 퀴즈 ${env.state.popRight}/${env.state.popTotal} · 플레이 약 ${mins}분</small>`, [{ label: '처음부터 다시 꿈꾸기' }]);
       heartOn = false; hearts.forEach(h => (h.visible = false));
       return res;
     },

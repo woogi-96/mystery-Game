@@ -198,7 +198,7 @@ export function build(env) {
         icons.forEach(s => (s.visible = false));
         env.cameraTo(shots.two, 1.8);
         mung.setPose('idle'); mung.setExpr('open');
-        await narr('그리고 멍뭉에게는,');
+        await narr('그리고 멍뭉 옆에는,');
         woogi.root.visible = true;
         woogi.setPose('wave'); woogi.setExpr('happyWink');
         sfx.heart();
@@ -206,7 +206,7 @@ export function build(env) {
         await step(anim(0.6, k => woogi.root.scale.setScalar(Math.max(0.01, k)), ease.back || ease.out));
         await anim(0.4, k => (mung.root.rotation.y = -0.15 - k * 0.4));
         mung.setExpr('happy');
-        await narr('세상에서 제일 소중한 사람이 있다.');
+        await narr('맛집 탐방 메이트이자 산책 메이트,');
         await step(env.cameraTo(shots.twoClose, 1.4));
         ui.nameTag('우기', '일자 앞머리 · 검정 긴 생머리 · 회색 집업', 'woogi');
         woogi.setPose('cheeks'); woogi.setExpr('happyWink');
@@ -217,7 +217,7 @@ export function build(env) {
         await narr('우기.', 1.6);
         heartsOn = true;
         env.cameraTo(shots.two, 2.4);
-        await narr('평범하지만 반짝이는, 두 사람의 하루하루.', 2.8);
+        await narr('둘이 있으면, 별일 없어도 그냥 즐겁다.', 2.8);
         ui.nameTag(null);
 
         // 지친 일상

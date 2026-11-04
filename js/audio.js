@@ -2,6 +2,7 @@
 let ctx = null;
 let muted = false;
 let musicNodes = null;
+let musicWanted = false;
 
 function ac() {
   if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -56,25 +57,75 @@ export const sfx = {
   siren() { for (let i = 0; i < 4; i++) { tone(700, 0.3, { vol: 0.05, delay: i * 0.6, slide: 300 }); tone(1000, 0.3, { vol: 0.05, delay: i * 0.6 + 0.3, slide: -300 }); } },
   heart() { tone(660, 0.12, { type: 'triangle', vol: 0.1 }); tone(990, 0.2, { type: 'triangle', vol: 0.08, delay: 0.1 }); },
   snore() { tone(110, 0.9, { type: 'sine', vol: 0.05, slide: 40 }); },
+  /* 배경음악: 밝고 잔잔한 오르골 + 패드 (F장조, I–V–vi–IV–ii–V 진행, 80bpm) — 외부 파일 없이 합성 */
   startMusic() {
+    musicWanted = true;
     if (muted || musicNodes) return;
     const a = ac();
-    const g = a.createGain(); g.gain.value = 0.025; g.connect(a.destination);
-    const notes = [261.6, 329.6, 392, 493.9, 440, 392, 329.6, 293.7];
-    let i = 0;
-    const id = setInterval(() => {
-      if (muted) return;
-      const o = a.createOscillator(); const gg = a.createGain();
-      o.type = 'sine'; o.frequency.value = notes[i % notes.length] * (i % 16 < 8 ? 1 : 0.75);
-      gg.gain.setValueAtTime(0.0001, a.currentTime);
-      gg.gain.exponentialRampToValueAtTime(1, a.currentTime + 0.05);
-      gg.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 1.4);
-      o.connect(gg).connect(g); o.start(); o.stop(a.currentTime + 1.5);
-      i++;
-    }, 600);
-    musicNodes = { g, id };
+    const master = a.createGain(); master.gain.value = 0;
+    master.gain.linearRampToValueAtTime(0.055, a.currentTime + 3);
+    const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600;
+    master.connect(lp).connect(a.destination);
+    // 은은한 잔향 (짧은 딜레이 피드백)
+    const dl = a.createDelay(); dl.delayTime.value = 0.28;
+    const fb = a.createGain(); fb.gain.value = 0.28;
+    const wet = a.createGain(); wet.gain.value = 0.35;
+    dl.connect(fb).connect(dl); dl.connect(wet).connect(lp);
+    const N = m => 440 * Math.pow(2, (m - 69) / 12);
+    // 코드(미디 번호): F, C/E, Dm, Bb, Gm7, C
+    const prog = [[53, 57, 60, 65], [52, 55, 60, 64], [50, 57, 62, 65], [46, 53, 58, 62], [43, 55, 58, 65], [48, 55, 58, 64]];
+    const melody = [
+      [77, null, 76, 74, 72, null, 69, null], [72, null, 74, 76, 79, null, 76, null],
+      [74, null, 72, 69, 77, null, 74, null], [74, 72, 70, null, 69, null, null, null],
+      [70, null, 72, 74, 77, null, 74, null], [72, null, null, 76, 79, null, null, null],
+    ];
+    const BEAT = 0.75, BAR = BEAT * 4;
+    const voice = (freq, t, dur, vol, type, attack, dest) => {
+      const o = a.createOscillator(); const g = a.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(master); if (dest) g.connect(dest);
+      o.start(t); o.stop(t + dur + 0.1);
+    };
+    let bar = 0, next = a.currentTime + 0.3;
+    const schedule = () => {
+      while (next < a.currentTime + 1.2) {
+        const ch = prog[bar % prog.length];
+        // 패드 (부드러운 삼각파, 느린 어택)
+        ch.forEach(m => voice(N(m), next, BAR + 0.6, 0.11, 'triangle', 0.9, null));
+        // 베이스
+        voice(N(ch[0] - 12), next, BEAT * 1.8, 0.22, 'sine', 0.03, null);
+        voice(N(ch[0] - 12), next + BEAT * 2, BEAT * 1.8, 0.16, 'sine', 0.03, null);
+        // 오르골 아르페지오 (8분음표)
+        const arp = [ch[0] + 12, ch[1] + 12, ch[2] + 12, ch[3] + 12, ch[2] + 12, ch[1] + 12, ch[2] + 12, ch[3] + 12];
+        arp.forEach((m, i) => {
+          const t = next + i * BEAT / 2;
+          voice(N(m), t, 1.1, 0.07, 'sine', 0.008, dl);
+          voice(N(m) * 2, t, 0.5, 0.012, 'sine', 0.005, null);
+        });
+        // 멜로디 (두 바퀴 중 한 바퀴만 — 잔잔하게)
+        if (Math.floor(bar / prog.length) % 2 === 1) {
+          melody[bar % prog.length].forEach((m, i) => { if (m) voice(N(m), next + i * BEAT / 2, 1.4, 0.09, 'sine', 0.01, dl); });
+        }
+        next += BAR; bar++;
+      }
+    };
+    schedule();
+    const id = setInterval(schedule, 250);
+    musicNodes = { master, id, a };
   },
-  stopMusic() { if (musicNodes) { clearInterval(musicNodes.id); musicNodes = null; } },
-  toggle() { muted = !muted; if (muted) this.stopMusic(); return muted; },
+  stopMusic(fade = 0.8) {
+    if (!musicNodes) return;
+    const { master, id, a } = musicNodes;
+    clearInterval(id);
+    master.gain.cancelScheduledValues(a.currentTime);
+    master.gain.setValueAtTime(master.gain.value, a.currentTime);
+    master.gain.linearRampToValueAtTime(0, a.currentTime + fade);
+    setTimeout(() => master.disconnect(), fade * 1000 + 3000);
+    musicNodes = null;
+  },
+  toggle() { muted = !muted; if (muted) { const w = musicWanted; this.stopMusic(0.2); musicWanted = w; } else if (musicWanted) this.startMusic(); return muted; },
   get muted() { return muted; },
 };

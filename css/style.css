@@ -163,3 +163,10 @@ button { font-family: var(--font); cursor: pointer; border: none; }
 @keyframes ntIn { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
 #skipBtn { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(11vh + 14px); z-index: 9; background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.5); border-radius: 99px; padding: 8px 16px; font-family: var(--font); font-size: 15px; cursor: pointer; backdrop-filter: blur(4px); }
 @media (max-width: 640px) { #narr { bottom: calc(11vh + 64px); } #skipBtn { bottom: calc(11vh + 10px); } }
+
+/* 돌발 퀴즈 */
+#ask .lvl.hidden { display: none; }
+#ask.pop { border-color: #ffb347; box-shadow: 0 0 0 4px rgba(255,179,71,0.35), var(--shadow); animation: popIn 0.35s ease; }
+#askTimer { height: 18px; border-radius: 99px; background: rgba(0,0,0,0.08); overflow: hidden; margin: 8px 0 10px; }
+#askTimer .fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff8f6b, #ffcc4d); color: #6a3a10; font-size: 12px; line-height: 18px; text-align: right; padding-right: 8px; box-sizing: border-box; transition: width 0.1s linear; }
+@keyframes popIn { from { transform: translateX(-50%) scale(0.92); } to { transform: translateX(-50%) scale(1); } }
