@@ -10,6 +10,7 @@ import * as Office from './scenes/office.js';
 import * as Bus from './scenes/bus.js';
 import * as Apt from './scenes/apartment.js';
 import * as Ending from './scenes/ending.js';
+import * as Prologue from './scenes/prologue.js';
 
 /* ───────── 렌더러 ───────── */
 const canvas = document.getElementById('gl');
@@ -249,15 +250,26 @@ async function playEpisodes(from) {
 async function runGame(fromEp = null) {
   state.wrongTotal = fromEp == null ? 0 : state.wrongTotal;
   state.startTime = performance.now();
-  ui.hud(true);
   ui.vignette(false);
   if (fromEp == null) {
+    // 프롤로그: "어느 도시의 밤, 멍뭉이라는 사람이 살고 있었다…"
+    if (!state.sawPrologue) {
+      state.sawPrologue = true;
+      const pro = getScene(Prologue, 'prologue');
+      pro.reset();
+      const fd = document.getElementById('fade'); fd.style.background = '#000'; fd.style.opacity = 1;
+      setScene(pro);
+      await pro.play();
+    }
+    ui.hud(true);
     const room = getScene(Room, 'room');
     room.reset();
     setScene(room);
+    ui.fadeOut(1.4);
     await room.intro(env);
     fromEp = 0;
   } else {
+    ui.hud(true);
     // 다시 꿈꾸기: 방에서 바로 잠든다
     const room = getScene(Room, 'room');
     room.reset();
@@ -302,7 +314,7 @@ async function boot() {
   if (params.has('view')) {
     // 디버그: ?view=1&shot=wide → 해당 꿈 장면을 정지 화면으로
     document.getElementById('title').classList.add('hidden');
-    const [mod, key] = EP_MODS[+params.get('view')] || [Ending, 'ending'];
+    const [mod, key] = params.get('view') === 'pro' ? [Prologue, 'prologue'] : EP_MODS[+params.get('view')] || [Ending, 'ending'];
     const sc = getScene(mod, key);
     sc.reset && sc.reset();
     setScene(sc);

@@ -192,7 +192,7 @@ export function build(env) {
       if (hat) { g.fillStyle = '#d4f0e2'; g.beginPath(); g.ellipse(x, 62, 46, 18, -0.15, 0, 7); g.fill(); }
       else { g.fillStyle = hair; g.beginPath(); g.arc(x + 4, 46, 14, 0, 7); g.fill(); }
     };
-    face(95, '#5a321b', true); face(185, '#6b3c1f', false);
+    face(95, '#1c1a1f', true); face(185, '#6b3c1f', false);
     g.fillStyle = '#ff6f98'; g.font = `30px ${FONT}`; g.textAlign = 'center'; g.fillText('♥', 140, 60);
     g.fillStyle = '#7a5a80'; g.font = `20px ${FONT}`; g.fillText('우기 ♥ 멍뭉', 140, 178);
   });

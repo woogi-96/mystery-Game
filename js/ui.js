@@ -39,6 +39,39 @@ export const ui = {
       if (o.auto) setTimeout(() => { if (!done) { clearInterval(iv); tx.textContent = full; done = true; } finish(); }, o.auto * 1000);
     });
   },
+  /* 프롤로그 내레이션: 한 글자씩 → 잠시 머문 뒤 사라짐 (클릭하면 빨리 넘김) */
+  narrate(text, hold) {
+    const el = $('narr');
+    ui.narrateCancel();
+    hold = hold ?? Math.max(1.8, text.length * 0.07);
+    return new Promise(resolve => {
+      let i = 0, done = false, ended = false;
+      el.textContent = ''; el.classList.add('on');
+      const end = () => {
+        if (ended) return; ended = true;
+        clearInterval(iv); clearTimeout(tm);
+        window.removeEventListener('pointerdown', tap); window.removeEventListener('keydown', tap);
+        el.classList.remove('on');
+        setTimeout(resolve, 450);
+      };
+      const full = () => { clearInterval(iv); el.textContent = text; done = true; tm = setTimeout(end, hold * 1000); };
+      const iv = setInterval(() => { i++; el.textContent = text.slice(0, i); if (i >= text.length) full(); }, 55);
+      let tm = 0;
+      const tap = e => { if (e.target && e.target.id === 'skipBtn') return; if (!done) full(); else end(); };
+      window.addEventListener('pointerdown', tap); window.addEventListener('keydown', tap);
+      ui._narrEnd = end;
+    });
+  },
+  narrateCancel() { if (ui._narrEnd) { const f = ui._narrEnd; ui._narrEnd = null; f(); } $('narr').classList.remove('on'); },
+  nameTag(name, sub = '', cls = '') {
+    const el = $('nameTag');
+    if (!name) { el.classList.add('hidden'); return; }
+    el.className = cls;
+    el.querySelector('.nt-name').textContent = name;
+    el.querySelector('.nt-sub').textContent = sub;
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  },
+  letterbox(on) { $('letterbox').classList.toggle('on', on); },
   hideDialog() { $('dialog').classList.add('hidden'); },
 
   choose(opts) {

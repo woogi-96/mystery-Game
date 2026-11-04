@@ -211,45 +211,58 @@ function downTangent(p) {
 }
 
 function hairMungmung(head) {
+  // 바가지 머리: 머리 전체를 둥글게 덮고, 앞머리는 눈썹 위에서 일자로, 옆·뒤는 귀 높이에서 끊긴다
+  const tex = canvasTex(512, 256, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, '#8a542b'); gr.addColorStop(0.5, '#6e3f1f'); gr.addColorStop(1, '#5e3418');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    // 정수리에서 아래로 흐르는 머리결
+    for (let i = 0; i < 260; i++) {
+      const x = Math.random() * w, y0 = Math.random() * h * 0.3;
+      g.strokeStyle = Math.random() < 0.5 ? 'rgba(160,110,60,0.35)' : 'rgba(60,30,12,0.35)';
+      g.lineWidth = 1 + Math.random() * 2;
+      g.beginPath(); g.moveTo(x, y0); g.quadraticCurveTo(x + (Math.random() - 0.5) * 10, h * 0.6, x + (Math.random() - 0.5) * 6, h);
+      g.stroke();
+    }
+  });
+  const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75, side: THREE.DoubleSide });
+  const R = 0.6;
+  const geo = new THREE.SphereGeometry(R, 64, 40, 0, Math.PI * 2, 0, 2.0);
+  const pos = geo.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const rxz = Math.hypot(v.x, v.z) || 1e-6;
+    const front = Math.max(0, v.z / rxz);           // 얼굴 쪽일수록 1
+    const back = Math.max(0, -v.z / rxz);
+    const minY = -0.12 + Math.pow(front, 2.2) * 0.34 - Math.pow(back, 1.5) * 0.24; // 앞머리는 눈썹 위, 옆은 귀 중간, 뒤는 목덜미
+    if (v.y < minY) {
+      const flare = 1 + Math.min(0.06, (minY - v.y) * 0.3);
+      v.set(v.x * flare, minY - 0.005 * (1 - front), v.z * flare);
+    }
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  geo.computeVertexNormals();
+  const bowl = new THREE.Mesh(geo, m);
+  bowl.position.set(0, 0.02, -0.01);
+  bowl.scale.set(1.04, 1.03, 1.05);
+  bowl.castShadow = true;
+  head.add(bowl);
+  // 정수리 가운데 사과머리 (위로 묶어 올린 꽁지 + 민트 머리끈)
   const base = mat('#7a4724', { roughness: 0.8 });
   const light = mat('#9c6a3c', { roughness: 0.75 });
-  // 머리에 딱 맞는 기본 덮개 (얼굴은 비우고 귀까지만)
-  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.585, 40, 24, 0, Math.PI * 2, 0, 1.9), base);
-  cap.rotation.x = -0.62; cap.position.set(0, 0.03, -0.01); cap.castShadow = true;
-  head.add(cap);
-  // 표면의 부드러운 웨이브 결 (밖으로 튀어나오지 않게 반쯤 묻음)
-  for (const p of fibSphere(46)) {
-    if (p.y < -0.35) continue;
-    if (p.z > 0.25 && p.y < 0.6 && Math.abs(p.x) < 0.8) continue;
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), p.y > 0.5 && Math.random() < 0.5 ? light : base);
-    m.position.copy(p).multiplyScalar(0.5);
-    m.position.y += 0.03;
-    m.castShadow = true;
-    head.add(m);
+  const tuft = group(head, [0, 0.64, 0.06], [-0.12, 0, 0]);
+  cyl(0.07, 0.09, 0.1, base, { pos: [0, 0.0, 0], parent: tuft });
+  torus(0.075, 0.03, mat('#a5e6c9'), { pos: [0, 0.05, 0], rot: [Math.PI / 2, 0, 0], parent: tuft });
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2;
+    lock(tuft, new THREE.Vector3(0, 0.07, 0), new THREE.Vector3(Math.cos(a) * 0.55, 1, Math.sin(a) * 0.55).normalize(), 0.2, 0.06, i % 2 ? light : base, 0.9);
   }
-  // 앞머리: 이마에 붙어 내려오는 짧은 가닥 (끝이 눈썹 높이)
-  const bangs = [-0.5, -0.3, -0.12, 0.06, 0.24, 0.42];
-  bangs.forEach((a, i) => {
-    const pos = new THREE.Vector3(Math.sin(a) * 0.5, 0.44 - Math.abs(a) * 0.08, Math.cos(a) * 0.33);
-    const side = a < 0 ? -1 : 1;
-    const dir = new THREE.Vector3(side * (0.15 + Math.abs(a) * 0.35), -1, 0.42).normalize();
-    lock(head, pos, dir, 0.3, 0.1, i % 3 === 1 ? light : base, side * 0.9);
-  });
-  // 귀를 살짝 덮는 옆머리 + 뒷머리
-  for (const s of [-1, 1]) lock(head, new THREE.Vector3(s * 0.52, 0.12, 0.08), new THREE.Vector3(s * 0.2, -1, 0.1).normalize(), 0.3, 0.1, base, -s);
-  for (let k = -2; k <= 2; k++) lock(head, new THREE.Vector3(k * 0.14, -0.05, -0.5), new THREE.Vector3(k * 0.1, -1, -0.25).normalize(), 0.24, 0.1, k % 2 ? light : base, 0.5);
-  // 정수리 작은 꽁지머리 + 민트 머리끈
-  const tuft = group(head, [0.04, 0.58, -0.14], [-0.55, 0, 0.12]);
-  torus(0.06, 0.035, mat('#a5e6c9'), { pos: [0, 0.02, 0], rot: [Math.PI / 2, 0, 0], parent: tuft });
-  for (let i = 0; i < 4; i++) {
-    const a = i / 4 * Math.PI * 2;
-    lock(tuft, new THREE.Vector3(0, 0.04, 0), new THREE.Vector3(Math.cos(a) * 0.3, 1, Math.sin(a) * 0.3 - 0.25).normalize(), 0.17, 0.05, i % 2 ? light : base, 0.6);
-  }
+  lock(tuft, new THREE.Vector3(0, 0.07, 0), new THREE.Vector3(0.05, 1, 0).normalize(), 0.22, 0.065, light, 0.5);
 }
 
 function hairWoogi(head) {
-  const base = mat('#5a321d', { roughness: 0.8 });
-  const light = mat('#774528', { roughness: 0.75 });
+  const base = mat('#18161c', { roughness: 0.55 });
+  const light = mat('#2c2833', { roughness: 0.45 });
   const cap = new THREE.Mesh(new THREE.SphereGeometry(0.61, 36, 22, 0, Math.PI * 2, 0, 2.0), base);
   cap.rotation.x = -0.55; cap.position.y = 0.01; cap.castShadow = true;
   head.add(cap);
@@ -265,32 +278,33 @@ function hairWoogi(head) {
     c.rotation.x = Math.PI; c.rotation.z = (Math.random() - 0.5) * 0.3;
     head.add(c);
   }
-  // 웨이브 긴 머리 (뒤 + 옆 + 어깨 앞으로 넘긴 머리)
+  // 긴 생머리 (뒤 + 옆 + 어깨 앞으로 내려온 머리) — 곧게 떨어진다
   const strands = [];
   const defs = [];
-  for (let i = 0; i < 16; i++) defs.push({ a: Math.PI * 0.9 + (i / 15) * Math.PI * 1.2, len: 1.15 + Math.random() * 0.15, front: false, layer: 0 });
-  for (const s of [-1, 1]) for (let k = 0; k < 2; k++) defs.push({ a: Math.PI / 2 - s * (1.12 + k * 0.14), len: 0.95 + k * 0.08, front: true, s });
+  for (let i = 0; i < 14; i++) defs.push({ a: Math.PI * 0.9 + (i / 13) * Math.PI * 1.2, len: 1.25, front: false, layer: 0 });
+  for (const s of [-1, 1]) defs.push({ a: Math.PI / 2 - s * 1.15, len: 1.0, front: true, s });
   defs.forEach((d, i) => {
     const sx = -Math.cos(d.a), sz = Math.sin(d.a);
-    const s = group(head, [sx * 0.47, 0.1, sz * 0.43]);
+    const s = group(head, [sx * 0.5, 0.1, sz * 0.46]);
     const pts = [];
     for (let k = 0; k <= 10; k++) {
       const v = k / 10;
-      const out = 0.02 + v * (d.front ? 0.08 : 0.18);
-      const wave = Math.sin(v * 11 + i * 1.3) * 0.06 * Math.min(1, v * 2.5);
+      // 머리에서 어깨까지 살짝 벌어졌다가 곧게 떨어진다
+      const out = 0.0 + Math.min(v * 2.2, 1) * (d.front ? 0.05 : 0.07);
+      const wave = 0;
       let x = sx * out + sz * wave, z = sz * out - sx * wave;
       if (d.front) z += v * 0.28;
       pts.push(new THREE.Vector3(x, -v * d.len, z));
     }
     const curve = new THREE.CatmullRomCurve3(pts);
     const segs = 44, rad = 10;
-    const geo = new THREE.TubeGeometry(curve, segs, d.front ? 0.1 : 0.13, rad, false);
+    const geo = new THREE.TubeGeometry(curve, segs, d.front ? 0.065 : 0.085, rad, false);
     const pos = geo.attributes.position;
     const c = new THREE.Vector3(), v3 = new THREE.Vector3();
     for (let r = 0; r <= segs; r++) {
       const v = r / segs;
       curve.getPointAt(v, c);
-      const taper = (1 - v * 0.5) * (1 + Math.sin(v * 22 + i) * 0.08);
+      const taper = d.front ? 1 - v * 0.35 : 1 - v * 0.2;
       for (let j = 0; j <= rad; j++) {
         const idx = r * (rad + 1) + j;
         v3.fromBufferAttribute(pos, idx).sub(c).multiplyScalar(taper).add(c);
@@ -301,7 +315,7 @@ function hairWoogi(head) {
     const m = new THREE.Mesh(geo, i % 3 === 1 ? light : base);
     m.castShadow = true;
     s.add(m);
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(d.front ? 0.06 : 0.08, 10, 8), i % 3 === 1 ? light : base);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(d.front ? 0.04 : 0.055, 10, 8), i % 3 === 1 ? light : base);
     tip.position.copy(pts[pts.length - 1]);
     s.add(tip);
     strands.push(s);

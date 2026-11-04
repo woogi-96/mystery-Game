@@ -148,3 +148,18 @@ button { font-family: var(--font); cursor: pointer; border: none; }
   #clockHud { font-size: 17px; }
   #dialog { bottom: 10px; padding: 22px 18px 18px; }
 }
+
+/* ───── 프롤로그 ───── */
+#letterbox .lb { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 5; transition: height 1.2s ease; pointer-events: none; }
+#letterbox .lb.top { top: 0; }
+#letterbox .lb.bottom { bottom: 0; }
+#letterbox.on .lb { height: 11vh; }
+#narr { position: fixed; left: 50%; bottom: calc(11vh + 26px); transform: translateX(-50%); width: min(760px, calc(100% - 32px)); text-align: center; color: #fff; font-family: var(--font); font-size: clamp(20px, 3.6vw, 34px); line-height: 1.5; white-space: pre-line; text-shadow: 0 2px 4px rgba(0,0,0,0.7), 0 4px 22px rgba(40,10,60,0.8); opacity: 0; transition: opacity 0.6s; pointer-events: none; z-index: 6; }
+#narr.on { opacity: 1; }
+#nameTag { position: fixed; left: max(24px, 5vw); top: calc(11vh + 24px); z-index: 6; pointer-events: none; animation: ntIn 0.7s ease both; }
+#nameTag .nt-name { display: inline-block; font-family: var(--font); font-size: clamp(28px, 5vw, 46px); color: #fff; background: var(--pink); padding: 4px 22px 6px; border-radius: 16px; box-shadow: 0 5px 0 #e46d93, 0 10px 24px rgba(0,0,0,0.35); }
+#nameTag.woogi .nt-name { background: #7ccfb0; box-shadow: 0 5px 0 #58b090, 0 10px 24px rgba(0,0,0,0.35); }
+#nameTag .nt-sub { margin-top: 12px; color: #fff; font-size: clamp(13px, 2vw, 16px); text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+@keyframes ntIn { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+#skipBtn { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(11vh + 14px); z-index: 9; background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.5); border-radius: 99px; padding: 8px 16px; font-family: var(--font); font-size: 15px; cursor: pointer; backdrop-filter: blur(4px); }
+@media (max-width: 640px) { #narr { bottom: calc(11vh + 64px); } #skipBtn { bottom: calc(11vh + 10px); } }
