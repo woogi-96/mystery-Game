@@ -221,11 +221,9 @@ function hairMungmung(head) {
   for (const p of fibSphere(46)) {
     if (p.y < -0.35) continue;
     if (p.z > 0.25 && p.y < 0.6 && Math.abs(p.x) < 0.8) continue;
-    const m = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), p.y > 0.5 && Math.random() < 0.5 ? light : base);
-    m.scale.set(0.13, 0.045, 0.13);
-    m.position.copy(p).multiplyScalar(0.56);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), p.y > 0.5 && Math.random() < 0.5 ? light : base);
+    m.position.copy(p).multiplyScalar(0.5);
     m.position.y += 0.03;
-    m.lookAt(m.position.clone().multiplyScalar(2));
     m.castShadow = true;
     head.add(m);
   }
