@@ -26,10 +26,17 @@ export const ease = {
   back: k => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); },
 };
 
+/* 트윈 묶음: 프롤로그 건너뛰기처럼 진행 중인 연출을 한꺼번에 멈출 때 쓴다 */
+let tweenTagNow = null;
+export function tweenTag(tag) { tweenTagNow = tag; }
+export function cancelTweens(tag) {
+  for (const tw of [...tweens]) if (tw.tag === tag) { tweens.delete(tw); tw.resolve(); }
+}
+
 export function anim(dur, fn, e = ease.inOut) {
   return new Promise(resolve => {
     if (dur <= 0) { fn(1, 1); resolve(); return; }
-    tweens.add({ dur, el: 0, fn, ease: e, resolve });
+    tweens.add({ dur, el: 0, fn, ease: e, resolve, tag: tweenTagNow });
   });
 }
 export const wait = s => anim(s, () => {});

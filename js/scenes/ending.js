@@ -199,7 +199,8 @@ export function build(env) {
       const mins = Math.round((performance.now() - env.state.startTime) / 60000);
       const R = env.ROUNDS, cur = env.state.round, next = (cur + 1) % R;
       const nextMsg = next === 0 ? `${R}개의 꿈을 모두 꿨어요! 다음엔 첫 번째 꿈부터 다시 시작해요.` : `다음엔 ${next + 1}번째 꿈 · 새로운 문제가 나와요!`;
-      const res = await ui.ending('💗 HAPPY END 💗', `알고 보니 다 꿈이었다!<br>멍뭉이는 우기와 데이트를 떠났습니다.<br><br><small>${cur + 1}번째 꿈 클리어 · 퀴즈 15문제 · 오답 ${env.state.wrongTotal}회 · 돌발 퀴즈 ${env.state.popRight}/${env.state.popTotal} · 플레이 약 ${mins}분<br>🌙 ${nextMsg}</small>`, [{ label: '다음 꿈 꾸기' }]);
+      env.markCleared();
+      const res = await ui.ending('💗 HAPPY END 💗', `알고 보니 다 꿈이었다!<br>멍뭉이는 우기와 데이트를 떠났습니다.<br><br><small>${cur + 1}번째 꿈 클리어 · 퀴즈 15문제<br>오답 ${env.state.wrongTotal}회 · 돌발 퀴즈 ${env.state.popRight}/${env.state.popTotal} · 플레이 약 ${mins}분<br>🌙 ${nextMsg}</small>`, [{ label: '다음 꿈 꾸기' }]);
       heartOn = false; hearts.forEach(h => (h.visible = false));
       return res;
     },

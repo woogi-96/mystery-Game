@@ -360,6 +360,8 @@ export function build(env) {
     focus: {},
     actors: [],
     reset() {
+      // 우기가 깨워 주러 왔던 흔적(꿈에 갇힘 엔딩) 정리
+      if (env.woogi.root.parent === scene) scene.remove(env.woogi.root);
       scene.add(mung.root);
       mung.root.visible = false;
       mung.root.rotation.set(0, 0, 0);
@@ -531,6 +533,7 @@ export function build(env) {
     },
 
     async fallAsleepAgain(env) {
+      env.ui.clock(false);
       setTime(23.7);
       setLight(false, 0);
       mung.root.visible = true;

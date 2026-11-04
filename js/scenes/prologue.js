@@ -1,4 +1,4 @@
-import { THREE, box, cyl, sph, cone, torus, group, mat, emissive, canvasTex, textSprite, heartMesh, anim, wait, ease, shot, rand, setSeed, skyDome, sparkles } from '../util.js';
+import { THREE, box, cyl, sph, cone, torus, group, mat, emissive, canvasTex, textSprite, heartMesh, anim, wait, ease, shot, rand, setSeed, skyDome, sparkles, tweenTag, cancelTweens } from '../util.js';
 import { place } from './common.js';
 
 /* 프롤로그: 동화책처럼 내레이션이 흐르는 오프닝 애니메이션
@@ -159,7 +159,8 @@ export function build(env) {
       let skipped = false;
       const skipBtn = document.getElementById('skipBtn');
       const SKIP = new Error('skip');
-      const onSkip = () => { skipped = true; sfx.click(); ui.narrateCancel(); };
+      const onSkip = () => { skipped = true; sfx.click(); tweenTag(null); cancelTweens('prologue'); ui.narrateCancel(); };
+      tweenTag('prologue');
       skipBtn.classList.remove('hidden');
       skipBtn.onclick = onSkip;
       const step = async p => { await p; if (skipped) throw SKIP; };
@@ -249,7 +250,8 @@ export function build(env) {
         if (e !== SKIP) throw e;
         await ui.fadeTo('#000', 1, 0.5);
       }
-      // 정리
+      // 정리 (남은 프롤로그 연출이 다음 장면에 끼어들지 않게)
+      tweenTag(null); cancelTweens('prologue');
       skipBtn.classList.add('hidden');
       skipBtn.onclick = null;
       ui.narrateCancel(); ui.nameTag(null); ui.letterbox(false);

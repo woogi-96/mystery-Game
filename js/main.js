@@ -205,6 +205,8 @@ const env = {
   /* 돌발 퀴즈: 장면과 관련된 짧은 문제, 제한 시간 안에! (하트는 깎이지 않음) */
   getQuiz,
   ROUNDS,
+  /* 끝까지 클리어: 엔딩 화면이 뜨는 순간 다음 판으로 저장 (창을 닫아도 유지) */
+  markCleared() { advanceRound(); updateRoundBadge(); },
   get alt() { return state.round > 0; },
   async popQuiz(key, p0) {
     const p = getPop(key, p0);
@@ -362,8 +364,6 @@ async function runGame(fromEp = null) {
   const end = getScene(Ending, 'ending');
   if (result.clear) {
     const choice = await end.happy(env, getScene(Room, 'room'));
-    advanceRound();
-    updateRoundBadge();
     if (choice === 0) return runGame(null);
   } else {
     const choice = await end.trapped(env, getScene(Room, 'room'), result.fail);

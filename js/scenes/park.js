@@ -270,14 +270,17 @@ export function build(env) {
   const scaleG = group(cave, [3.6, 0, Z2 - 3]);
   cyl(0.5, 0.7, 1.0, rockM, { pos: [0, 0.5, 0], parent: scaleG });
   cyl(0.9, 0.9, 0.08, mat('#c9a043', { metalness: 0.7, roughness: 0.3 }), { pos: [0, 1.05, 0], parent: scaleG });
-  texPlane(0.8, 0.5, 200, 120, (g, w, h) => { g.fillStyle = '#6a6278'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffe08a'; g.font = `80px ${FONT}`; g.textAlign = 'center'; g.fillText('= 4', w / 2, 95); }, { pos: [0, 0.6, 0.62], parent: scaleG });
+  const drawScaleSign = t => (g, w, h) => { g.fillStyle = '#6a6278'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffe08a'; g.font = `80px ${FONT}`; g.textAlign = 'center'; g.fillText(t, w / 2, 95); };
+  const scaleSign = texPlane(0.8, 0.5, 200, 120, drawScaleSign('= 4'), { pos: [0, 0.6, 0.62], parent: scaleG });
   const door2 = group(cave, [3.6, 0, Z2 - 7.6]);
   const slab = rbox(3.6, 5, 0.6, 0.1, rockM2, { pos: [0, 2.5, 0], parent: door2 });
-  texPlane(2.4, 2.4, 300, 300, (g, w, h) => {
+  // 석문 표지: 기본 문제는 "4", 다른 판은 "?" (그 판의 문제가 새겨진 문)
+  const drawDoorSign = t => (g, w, h) => {
     g.fillStyle = '#3a3548'; g.fillRect(0, 0, w, h);
     g.strokeStyle = '#9fe0ff'; g.lineWidth = 8; g.beginPath(); g.arc(150, 150, 120, 0, 7); g.stroke();
-    g.fillStyle = '#9fe0ff'; g.font = `150px ${FONT}`; g.textAlign = 'center'; g.fillText('4', 150, 205);
-  }, { glow: 0.8, pos: [0, 2.8, 0.31], parent: door2 });
+    g.fillStyle = '#9fe0ff'; g.font = `150px ${FONT}`; g.textAlign = 'center'; g.fillText(t, 150, 205);
+  };
+  const doorSign = texPlane(2.4, 2.4, 300, 300, drawDoorSign('4'), { glow: 0.8, pos: [0, 2.8, 0.31], parent: door2 });
   // 차오르는 물
   const flood = new THREE.Mesh(new THREE.CircleGeometry(9.5, 40), new THREE.MeshStandardMaterial({ color: '#3a7fb8', transparent: true, opacity: 0.55, roughness: 0.05, metalness: 0.3 }));
   flood.rotation.x = -Math.PI / 2; flood.position.set(0, 0.02, Z2); cave.add(flood);
@@ -372,6 +375,8 @@ export function build(env) {
       doors3.forEach(d => (d.dp.rotation.y = 0));
       exitLight.intensity = 0;
       door2.position.y = 0;
+      doorSign.tex.redraw(drawDoorSign(env.alt ? '?' : '4'));
+      scaleSign.tex.redraw(drawScaleSign(env.alt ? '= ?' : '= 4'));
     },
     onEnter() { sc.scene.add(mung.root); },
     update(dt, t) {
@@ -502,7 +507,7 @@ export function build(env) {
         place(cave, ranger, [1.6, 0, Z3 + 6.5], Math.PI - 0.3, 'idle');
         env.cameraSet(shots.c3);
       });
-      await say(mung, '멍뭉', '마지막 방인가 봐요… 문이 네 개나 있어요.');
+      await say(mung, '멍뭉', env.alt ? '마지막 방인가 봐요… 문이 네 개나 있고, 천장에 문제가 새겨져 있어요! 맞히면 진짜 출구가 열리나 봐요.' : '마지막 방인가 봐요… 문이 네 개나 있어요.');
       if (await env.quiz('cave3') === 'fail') return 'fail';
       mk.hide();
 
