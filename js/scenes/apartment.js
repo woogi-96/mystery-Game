@@ -165,7 +165,7 @@ export function build(env) {
 
   const say = talker(env.ui);
   const sc = {
-    scene, shots, focus, marker: mk, actors: [neighbor, guard],
+    scene, shots, focus, marker: mk, actors: [neighbor, guard], cast: { '경비 아저씨': guard, '1004호': neighbor },
     startShot: () => shots.wide,
     reset() {
       place(scene, mung, [-12.0, 0, 0.8], Math.PI / 2, 'idle');
@@ -190,41 +190,45 @@ export function build(env) {
 
     async play(env) {
       const { ui } = env;
-      // 우기네 엘리베이터에서 내렸는데… 우리 집 복도
+      // 퇴근 버스에서 내려 → 우리 아파트 10층
       place(scene, mung, [-13.4, 0, 0], Math.PI / 2, 'idle', 'open');
+      guard.root.visible = false;
       elevDoors.forEach(d => (d.position.z = Math.sign(d.position.z) * 0.5));
       sfx.blip();
       await anim(0.9, k => elevDoors.forEach(d => (d.position.z = Math.sign(d.position.z) * (0.5 + k * 0.95))));
       await walkTo(mung, -12.0, 0.8, 2.0);
       anim(0.9, k => elevDoors.forEach(d => (d.position.z = Math.sign(d.position.z) * (1.45 - k * 0.95))));
       await env.cameraTo(shots.elev, 1.4);
-      mung.setExpr('surprised');
-      await say(mung, '멍뭉', '……어? 우기네 10층에 내렸는데… 여긴 우리 아파트 복도잖아? 1003호 우리 집!');
-      mung.setExpr('open');
-      await say(mung, '멍뭉', '시계는 새벽 2시… 우기는 내일 만나야겠다. 그런데 옆집이 시끄럽네…?');
-      walkTo(mung, 0.6, 0.6, 2.2);
-      await env.cameraTo(shots.hall, 2.4);
-      const voice = textSprite('🎙 "Good morning, team!"', { size: 54, scale: 0.6, border: '#a8c8ff' });
+      await say(mung, '멍뭉', '휴, 드디어 집이다… 우기 얼굴 보니까 피곤이 싹 풀리네. 내일 데이트니까 씻고 푹 자야지.');
+      // 새벽 2시, 옆집 소리에 깨서 복도로
+      await env.cut(async () => {
+        place(scene, mung, [-3.5, 0, 0.6], Math.PI / 2, 'idle', 'sleepy');
+        place(scene, guard, [5.8, 0, 1.0], -Math.PI / 2, 'idle');
+        env.cameraSet(shots.hall);
+      });
+      await ui.caption('⏩ 새벽 2시 · 옆집 소리에 잠이 깼다', 1.8);
+      const voice = textSprite('🎙 "Good morning, team!"', { size: 54, scale: 0.32, border: '#a8c8ff' });
       voice.position.set(2.5, 3.2, -1.4); scene.add(voice);
       sfx.blip();
-      await turnTo(mung, Math.PI, 0.4);
+      await walkTo(mung, 0.6, 0.6, 2.2, Math.PI);
       mung.setExpr('surprised');
       emote(scene, mung, '?', 2);
-      await say(mung, '멍뭉', '1004호…? 새벽 2시에 "좋은 아침"이라니. 요즘 옆집 사람, 수상하단 말이야.');
-      await say(mung, '멍뭉', '말투도 이상하고, 집 밖에도 잘 안 나오고, 새벽에만 움직이고… 설마 간첩…?');
+      await say(mung, '멍뭉', '1004호…? 새벽 2시에 "좋은 아침"이라니. 말투도 이상하고, 새벽에만 움직이고… 설마 간첩?');
       mung.setExpr('open');
+      await walkTo(guard, 4.0, 1.1, 1.8, -Math.PI / 2);
+      await say(guard, '경비 아저씨', '학생도 나왔구먼. 나도 순찰 돌다가 저 집이 하도 수상해서 말이야.');
       if (await env.quiz('apt1') === 'fail') return 'fail';
       mk.hide();
       scene.remove(voice);
 
-      await say(mung, '멍뭉', 'LA는 지금 전날 아침 9시… 시차 때문에 새벽에 일하는 거구나.');
       // 며칠 뒤, 엘리베이터 앞
       await env.cut(async () => {
         place(scene, mung, [-11.5, 0, 0.9], -Math.PI / 2, 'idle');
         place(scene, neighbor, [-12.9, 0, 0.2], Math.PI / 2, 'idle');
+        place(scene, guard, [-9.0, 0, 1.3], -Math.PI / 2, 'idle');
         env.cameraSet(shots.elev);
       });
-      await ui.caption('며칠 뒤 · 엘리베이터 앞', 1.6);
+      await ui.caption('며칠 뒤 새벽 · 엘리베이터 앞', 1.6);
       neighbor.setExpr('happy');
       await say(neighbor, '1004호', '(아이 같은 목소리로) 안녕하세요오~ 좋은 새벽이에요오~');
       await say(mung, '멍뭉', '(어제는 사극 말투, 그제는 로봇 말투였는데…?!)');
@@ -234,13 +238,9 @@ export function build(env) {
       if (await env.quiz('apt2') === 'fail') return 'fail';
       mk.hide();
 
-      // 경비 아저씨 등장
-      place(scene, guard, [-8.5, 0, 1.2], -Math.PI / 2, 'think');
-      await env.cameraTo(shots.elev, 1);
-      await say(guard, '경비 아저씨', '학생, 1004호 말이야… 그래도 간첩일 수도 있잖아? 새벽에만 다니고, 방음재 붙이고, 해외랑 연락하고…');
-      mung.setPose('think');
-      await say(mung, '멍뭉', '(그 단서들은 두 가설 모두로 설명돼… 둘을 "가르는" 증거가 필요해.)');
-      mung.setPose('idle');
+      guard.setPose('think');
+      await say(guard, '경비 아저씨', '그래도 말이야… 간첩일 수도 있잖아? 새벽에만 다니고, 방음재 붙이고, 해외랑 연락하고…');
+      guard.setPose('idle');
       if (await env.quiz('apt3') === 'fail') return 'fail';
       mk.hide();
 

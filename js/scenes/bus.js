@@ -257,6 +257,7 @@ export function build(env) {
 
   const sc = {
     scene, shots, focus, marker: mk, actors: [driver, driver2, grandma, student, worker, medic],
+    cast: { '회사원': worker, '대학생': student, '할머니': grandma, '대체 기사': driver2, '기사님': driver },
     startShot: () => shots.board,
     reset() {
       speed = 40; wobble = 0; blink = false; siren = false;
@@ -308,7 +309,7 @@ export function build(env) {
       place(scene, mung, [-1.55, 0.38, 0.8], Math.PI - 0.6, 'sitChair', 'open');
       anim(2.5, k => (speed = 40 * k));
       await env.cameraTo(shots.side, 2);
-      await say(mung, '멍뭉', '우기네 가는 버스~ 10시 반까지 별빛아파트 정류장에서 만나기로 했지. 헤헤.');
+      await say(mung, '멍뭉', '퇴근 버스~ 우기가 10시 반까지 우리 아파트 앞에 잠깐 와 있겠다고 했지. 헤헤.');
       // 노선 이탈
       wobble = 0.6;
       ledText = '⚠ 노선 이탈 ⚠  ⚠ 노선 이탈 ⚠'; ledColor = '#ff4040';
@@ -376,7 +377,6 @@ export function build(env) {
       await say(driver2, '대체 기사', '기사님은 구급대가 잘 모셔 갔어요. 회사에서 급히 왔는데… 이 동네는 제가 처음이라서요.');
       await say(driver2, '대체 기사', '별빛아파트까지 어느 길로 가면 될까요? 이 버스, 높이가 3.2m라 아무 길이나 못 가요!');
       mung.setExpr('open');
-      await say(mung, '멍뭉', '(우기는 10시 반까지 기다린다고 했어. 지금 22:05… 노선도를 보자.)');
       await env.cameraTo(shots.mapView, 1.2);
       if (await env.quiz('bus3') === 'fail') return 'fail';
       mk.hide();
@@ -393,12 +393,14 @@ export function build(env) {
       await anim(1.5, k => (speed = 40 * (1 - k)));
       ledText = '이번 정류장: 별빛아파트'; ledColor = '#ffcc40';
       [grandma, student, worker, mung].forEach(c => { c.setPose(c === mung ? 'cheer' : c.pose); c.setExpr('happy'); });
-      await say(mung, '멍뭉', '도착! 1분 남았다…! 우기네 집 10층이랬지? 엘리베이터 타고 올라가자!');
+      await say(mung, '멍뭉', '도착! 1분 남았다…!');
+      await say(null, '우기', '(창밖에서 손을 흔들며) 멍뭉아~! 오늘 고생 많았지? 얼굴 봤으니까 됐어. 내일 데이트 잊지 마 💗');
+      await say(mung, '멍뭉', '응! 우기도 조심히 들어가~ 내일 봐!');
       mung.setPose('idle');
       sfx.door();
       await walkTo(mung, 1.6, -4.3, 2.8);
       await ui.fadeTo('#000', 1, 0.8);
-      await ui.caption('🛗 별빛아파트 엘리베이터 · 10층 버튼을 누른다…  띵!', 2.2);
+      await ui.caption('🛗 우리 집, 별빛아파트 엘리베이터 · 10층…  띵!', 2.2);
       return 'ok';
     },
     debug(state) { if (state === 'stop') { speed = 0; blink = true; driver.setPose('slump'); } },

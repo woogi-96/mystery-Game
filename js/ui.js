@@ -177,7 +177,50 @@ export const ui = {
       });
     });
   },
-  hideQuiz() { $('quiz').classList.add('hidden'); },
+  /* 대화 중 질문: 대사창에는 질문, 그 위에 선택지 팝업 */
+  ask(name, question, q, disabled = new Set()) {
+    const box = $('ask');
+    $('askLevel').textContent = `난이도 ${q.level}`;
+    $('askLevel').className = 'lvl ' + ({ '하': 'l1', '중': 'l2', '상': 'l3' }[q.level]);
+    $('askTitle').textContent = q.title;
+    const memo = $('askMemo');
+    memo.innerHTML = q.clues.map(c => `<li>${c.text}</li>`).join('');
+    memo.classList.add('hidden');
+    $('askMemoBtn').onclick = () => { sfx.click(); memo.classList.toggle('hidden'); };
+    // 대사창에 질문 표시 (클릭으로 넘어가지 않음)
+    const dlg = $('dialog');
+    dlg.classList.remove('hidden');
+    $('dlgName').textContent = name;
+    $('dlgName').className = name in NAME_CLASS ? NAME_CLASS[name] : 'npc';
+    $('dlgText').textContent = question;
+    $('dlgNext').style.visibility = 'hidden';
+    return new Promise(resolve => {
+      const opts = $('askOptions');
+      opts.innerHTML = '';
+      q.options.forEach((text, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.innerHTML = `<b>${'ABCD'[i]}</b><span>${text}</span>`;
+        b.disabled = disabled.has(i);
+        b.onclick = () => {
+          box.classList.add('hidden');
+          dlg.classList.add('hidden');
+          $('dlgNext').style.visibility = '';
+          resolve(i);
+        };
+        opts.appendChild(b);
+      });
+      box.classList.remove('hidden');
+    });
+  },
+  async toast(text, color = '#fff') {
+    const t = $('toast');
+    t.textContent = text; t.style.color = color;
+    await anim(0.3, k => { t.style.opacity = k; t.style.transform = `translate(-50%, ${(1 - k) * 20}px)`; }, ease.out);
+    await wait(1.0);
+    await anim(0.4, k => (t.style.opacity = 1 - k));
+  },
+  hideQuiz() { $('quiz').classList.add('hidden'); $('ask').classList.add('hidden'); },
 
   feedback(ok, q, dead = false, left = 0) {
     const fb = $('feedback');

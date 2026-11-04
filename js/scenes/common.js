@@ -40,7 +40,7 @@ export function turnTo(ch, rot, dur = 0.4) {
 
 /* 머리 위 말풍선 아이콘 (! ? 💢 등) */
 export function emote(scene, ch, text, dur = 1.8, o = {}) {
-  const s = textSprite(text, { size: 80, scale: o.scale || 0.6, ...o });
+  const s = textSprite(text, { size: 80, scale: o.scale || 0.38, ...o });
   scene.add(s);
   const hp = new THREE.Vector3();
   const upd = () => {

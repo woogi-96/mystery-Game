@@ -183,7 +183,7 @@ export function build(env) {
   rbox(0.42, 0.1, 0.36, 0.05, '#2b2d36', { pos: [0, 0.05, 0], parent: pc });
   rbox(0.42, 0.1, 0.36, 0.05, '#2b2d36', { pos: [0, 0.2, -0.22], rot: [-1.2, 0, 0], parent: pc });
   box(0.34, 0.02, 0.28, '#6a6f80', { pos: [0, 0.1, 0], parent: pc, cast: false });
-  texPlane(0.32, 0.32, 128, 128, (g, w, h) => { g.fillStyle = '#ffe97a'; g.fillRect(0, 0, w, h); g.fillStyle = '#5a3d5c'; g.font = `20px ${FONT}`; g.fillText('15:00', 10, 34); g.font = `17px ${FONT2}`; g.fillText('폰부스', 10, 64); g.fillText('화상면접', 10, 90); g.fillText('참관!', 10, 114); }, { pos: [3.5 + 0.55 + 0.42, 2.15, 2.12], rot: [0, -0.05, 0.08], parent: scene });
+  texPlane(0.32, 0.32, 128, 128, (g, w, h) => { g.fillStyle = '#ffe97a'; g.fillRect(0, 0, w, h); g.fillStyle = '#5a3d5c'; g.font = `20px ${FONT}`; g.fillText('21:30', 10, 34); g.font = `17px ${FONT2}`; g.fillText('폰부스', 10, 64); g.fillText('LA 화상', 10, 90); g.fillText('회의!', 10, 114); }, { pos: [3.5 + 0.55 + 0.42, 2.15, 2.12], rot: [0, -0.05, 0.08], parent: scene });
 
   /* 동료들 */
   const crewDef = [
@@ -283,7 +283,7 @@ export function build(env) {
   }
 
   const sc = {
-    scene, shots, focus, marker: mk, actors: crewList,
+    scene, shots, focus, marker: mk, actors: crewList, cast: crew,
     startShot: () => shots.elevIn,
     reset() {
       setBlackout(0);
@@ -323,15 +323,16 @@ export function build(env) {
       sfx.blip();
       await anim(1.0, k => elevDoors.forEach((d, i) => (d.position.z = (i ? 1 : -1) * (0.6 + k * 1.1))));
       await walkTo(mung, -9.2, -5.2, 2.2);
-      await say(mung, '멍뭉', '……어? 동굴 문을 열었더니… 우리 회사 12층?!');
+      await say(mung, '멍뭉', '……어? 동굴 문을 나섰더니… 바로 우리 회사 12층?! 꿈이라 순간이동인가 봐.');
       mung.setExpr('open');
-      await say(mung, '멍뭉', '아 맞다, 오늘 v2.3 배포날이었지! 얼른 자리로 가자.');
+      await say(mung, '멍뭉', '오후 1시, 딱 출근 시간이다! 오늘 v2.3 배포날이니까 얼른 자리로 가자.');
       anim(1.0, k => elevDoors.forEach((d, i) => (d.position.z = (i ? 1 : -1) * (1.7 - k * 1.1))));
       env.cameraTo(shots.wide, 2.4);
       await walkTo(mung, -1.5, 5.6, 3.0);
       await walkTo(mung, 0.5, 4.4, 3.0);
       place(scene, mung, [0.5, 0.38, 3.4], Math.PI, 'type');
       await env.cameraTo(shots.desk, 1.6);
+      await ui.caption('⏩ 오후 내내 개발하고, 야근까지… 밤 9시 32분', 2.2);
       await say(mung, '멍뭉', '배포 끝! 이제 완료 메일만 보내면 퇴근이다…!');
       await env.cameraTo(shots.screen, 1.4);
       await say(mung, '멍뭉', '"보내기" 클릭~');
@@ -349,7 +350,7 @@ export function build(env) {
       mung.setPose('panic'); mung.setExpr('surprised');
       await say(null, '동료들', '으악! 정전이야?! 아무것도 안 보여!!');
       sfx.alarm();
-      await say(mung, '멍뭉', '메…메일은?! … 아니, 지금 그게 중요한 게 아니지. 침착하자.');
+      await say(mung, '멍뭉', '메…메일은?! … 아니, 지금 그게 중요한 게 아니지.');
       mung.setPose('idle'); mung.setExpr('open');
       if (await env.quiz('office1') === 'fail') return 'fail';
       mk.hide();
@@ -367,7 +368,7 @@ export function build(env) {
       sfx.wrong();
       await say(mung, '멍뭉', '삑— … 어? 카드를 찍었는데 문이 안 열려!');
       upsLeft = 6; drawUps(true);
-      await say(crew['이대리'], '이대리', '정전이면 원래 문이 열리는 거 아니었어?! 카드리더 불은 왜 아직 켜져 있지?');
+      await say(crew['이대리'], '이대리', '정전이면 원래 문이 열리는 거 아니었어?!');
       if (await env.quiz('office2') === 'fail') return 'fail';
       mk.hide();
 
@@ -405,7 +406,6 @@ export function build(env) {
       env.ui.captionOff();
       mung.setPose('think');
       await say(mung, '멍뭉', '하나, 둘, 셋, 넷, 다섯, 여섯…? 여섯 명?!');
-      await say(crew['이대리'], '이대리', '박사원 내 바로 뒤에 있었는데? 내가 마지막으로 사무실 문 닫고 나왔거든.');
       if (await env.quiz('office3') === 'fail') return 'fail';
       mk.hide();
 
@@ -438,7 +438,7 @@ export function build(env) {
       await say(mung, '멍뭉', '헤헤… 아, 근데 그 메일… 안 보내졌겠지…?');
       await say(crew['오선임'], '오선임', '걱정 마요~ 메일은 "임시 저장"돼 있을 거예요 ㅎㅎ');
       mung.setPose('idle'); mung.setExpr('happy');
-      await say(mung, '멍뭉', '다행이다! 그럼 다 같이 1층으로 내려가요. 저는 진짜 퇴근! 우기 보러 가야지~');
+      await say(mung, '멍뭉', '다행이다! 그럼 다 같이 1층으로 내려가요. 저는 버스 타고 퇴근할게요. 우기가 아파트 앞으로 잠깐 온댔거든요!');
       await ui.fadeTo('#000', 1, 0.9);
       await ui.caption('🚏 회사 앞 버스 정류장 · 밤 10시 3분 · 742번 버스가 들어온다', 2.4);
       return 'ok';

@@ -95,33 +95,60 @@ const env = {
   state,
 
   /* 퀴즈 실행: 하트 관리 + 단서 포커스 */
+  /* 대화형 퀴즈: 인물들이 대화로 단서를 주고 → 질문 → 선택지 팝업 → 반응 */
   async quiz(id) {
     const q = QUIZ[id];
     const ep = EPISODES[state.ep];
     ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id), 3);
     const before = { pos: camBase.pos.clone(), look: camBase.look.clone(), fov: camBase.fov };
-    const res = await ui.quiz(q, {
-      focus: name => {
-        const f = current.focus && current.focus[name];
-        if (f) cameraTo(f, 1.1);
-        if (current.marker) {
-          if (f && f.mark) current.marker.show(new THREE.Vector3(...f.mark), f.r || 0.5);
-          else current.marker.hide();
-        }
-        if (current.onFocus) current.onFocus(name);
-      },
-      wrong: () => {
-        state.hearts -= 1;
-        state.wrongTotal += 1;
-        ui.setHearts(state.hearts);
-        env.shake(0.15);
-        if (current.onWrong) current.onWrong();
-        return state.hearts;
-      },
-    });
-    await cameraTo(before, 1.0);
-    if (res === 'ok') ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id) + 1, 3);
-    return res;
+    const who = name => (name === '멍뭉' ? mung : (current.cast && current.cast[name]) || null);
+    const say = (name, text) => { const ch = who(name); return ui.say(name, text, { onTalk: () => { if (ch) ch.talk = Math.min(3.5, text.length * 0.06); } }); };
+    const focus = name => {
+      const f = name && current.focus && current.focus[name];
+      if (f) cameraTo(f, 1.1);
+      if (current.marker) {
+        if (f && f.mark) current.marker.show(new THREE.Vector3(...f.mark), f.r || 0.5);
+        else current.marker.hide();
+      }
+    };
+    for (const [name, text, f] of q.lines || []) {
+      focus(f);
+      await say(name, text);
+    }
+    if (current.marker) current.marker.hide();
+    cameraTo(before, 1.0);
+    const asker = who(q.asker);
+    const wrongs = new Set();
+    for (;;) {
+      if (asker) asker.talk = 1.5;
+      const pick = await ui.ask(q.asker, q.ask || q.question, q, wrongs);
+      if (pick === q.answer) {
+        sfx.correct();
+        ui.toast('✔ 정답!', '#ffe08a');
+        mung.setExpr('happy');
+        await say(q.asker, q.explain);
+        await say(q.asker, '정리하면 → ' + q.chain.join(' → '));
+        mung.setExpr('open');
+        ui.setEpisode(`꿈 ${ep.no} · ${ep.title}`, ep.quizzes.indexOf(id) + 1, 3);
+        return 'ok';
+      }
+      sfx.wrong();
+      wrongs.add(pick);
+      state.hearts -= 1;
+      state.wrongTotal += 1;
+      ui.setHearts(state.hearts);
+      ui.shakeHearts();
+      env.shake(0.15);
+      ui.toast('💔 하트 -1', '#ff9eb5');
+      mung.setExpr('sad');
+      if (state.hearts <= 0) {
+        await say(q.asker, '음… 그건 아닌 것 같은데… 어라? 주변이 점점 어두워진다……');
+        mung.setExpr('open');
+        return 'fail';
+      }
+      await say(q.asker, '음, 그건 아닌 것 같아. ' + q.hint);
+      mung.setExpr('open');
+    }
   },
 
   /* 꿈과 꿈 사이 전환: 카메라가 빨려 들어가며 몽환 소용돌이 → 다음 꿈에서 빠져나옴 */

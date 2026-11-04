@@ -37,6 +37,7 @@
   </div>
 
   <div id="caption"></div>
+  <div id="toast"></div>
   <div id="card"><div class="card-no"></div><div class="card-title"></div><div class="card-sub"></div></div>
 
   <!-- 대화 -->
@@ -46,6 +47,13 @@
     <div id="dlgNext">▼</div>
   </div>
   <div id="choices" class="hidden"></div>
+
+  <!-- 대화 속 질문 팝업 -->
+  <div id="ask" class="hidden">
+    <div class="ask-head"><span id="askLevel" class="lvl"></span><span id="askTitle"></span><button id="askMemoBtn" type="button">📝 단서 메모</button></div>
+    <ul id="askMemo" class="hidden"></ul>
+    <div id="askOptions"></div>
+  </div>
 
   <!-- 퀴즈 -->
   <div id="quiz" class="hidden">

@@ -20,9 +20,19 @@ export function build(env) {
   const outside = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), mat('#a8d98f'));
   outside.rotation.x = -Math.PI / 2; outside.position.y = -0.05; outside.receiveShadow = true; scene.add(outside);
   for (let i = 0; i < 9; i++) tree(scene, -16 - Math.random() * 6, -10 + i * 3, 1.1 + Math.random() * 0.4, ['#ffc4dc', '#ffb0cf', '#ffd6e6']);
-  // 운동장 트랙
-  const track = new THREE.Mesh(new THREE.RingGeometry(8, 10, 48), mat('#e39a7a'));
-  track.rotation.x = -Math.PI / 2; track.position.set(-30, 0.01, 0); scene.add(track);
+  // 대학 캠퍼스: 본관 + 시계탑 + 잔디 광장 + 다른 강의동
+  const campus = group(scene, [-34, 0, 0]);
+  const brick = mat('#c9785a'), stone = mat('#efe6d6');
+  box(10, 9, 22, brick, { pos: [-4, 4.5, 0], parent: campus });
+  for (let f = 0; f < 3; f++) for (let k = 0; k < 7; k++) box(0.2, 1.4, 1.6, emissive('#cfe6ff', 0.2), { pos: [1.05, 1.6 + f * 2.6, -9 + k * 3], parent: campus });
+  box(10.4, 0.6, 22.4, stone, { pos: [-4, 9.2, 0], parent: campus });
+  const tower = group(campus, [-2, 0, 0]);
+  box(4, 16, 4, brick, { pos: [0, 8, 0], parent: tower });
+  cone(3.2, 4, mat('#4a6a8a'), { pos: [0, 18, 0], rot: [0, Math.PI / 4, 0], parent: tower, seg: 4 });
+  const tclock = texPlane(2.6, 2.6, 256, 256, (g, w, h) => { g.fillStyle = '#fffaf0'; g.beginPath(); g.arc(128, 128, 120, 0, 7); g.fill(); g.strokeStyle = '#333'; g.lineWidth = 8; g.stroke(); g.lineCap = 'round'; g.beginPath(); g.moveTo(128, 128); g.lineTo(128, 50); g.moveTo(128, 128); g.lineTo(190, 128); g.stroke(); }, { pos: [2.02, 13, 0], rot: [0, Math.PI / 2, 0], parent: tower, transparent: true });
+  const banner = texPlane(12, 1.6, 900, 120, (g, w, h) => { g.fillStyle = '#1f3a6b'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffe08a'; g.font = `80px ${FONT}`; g.textAlign = 'center'; g.fillText('꿈나라대학교', w / 2, 92); }, { pos: [1.1, 7.2, 6], rot: [0, Math.PI / 2, 0], parent: campus });
+  const lawnPath = new THREE.Mesh(new THREE.PlaneGeometry(20, 3), mat('#e8dcc4'));
+  lawnPath.rotation.x = -Math.PI / 2; lawnPath.position.set(-24, 0.01, 0); scene.add(lawnPath);
 
   /* ───────── 교실 ───────── */
   const W = 8, D = 6, H = 5;
@@ -30,7 +40,7 @@ export function build(env) {
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W * 2, D * 2), new THREE.MeshStandardMaterial({ map: woodTex('#d9b48a', '#b88d62', 12, [2, 2]), roughness: 0.7 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = 0.01; floor.receiveShadow = true; room.add(floor);
   box(W * 2 + 0.3, 0.4, D * 2 + 0.3, '#9a8070', { pos: [0, -0.22, 0], parent: room });
-  const wallTop = mat('#fbf4e6'), wallBot = mat('#9cc9b4');
+  const wallTop = mat('#f1eee8'), wallBot = mat('#b98d5e');
   // 앞벽 (칠판)
   box(W * 2, H - 1.2, 0.3, wallTop, { pos: [0, 1.2 + (H - 1.2) / 2, -D], parent: room });
   box(W * 2, 1.2, 0.3, wallBot, { pos: [0, 0.6, -D], parent: room });
@@ -52,28 +62,32 @@ export function build(env) {
 
   // 칠판
   const board = texPlane(9, 3, 1200, 400, () => {}, { pos: [0, 2.9, -D + 0.2], parent: room });
-  box(9.4, 3.4, 0.1, '#b48a5a', { pos: [0, 2.9, -D + 0.14], parent: room });
-  box(9.4, 0.12, 0.3, '#b48a5a', { pos: [0, 1.18, -D + 0.25], parent: room });
-  for (let i = 0; i < 4; i++) box(0.3, 0.06, 0.06, ['#ffffff', '#ffd34d', '#ff9eb5', '#9fd8ff'][i], { pos: [-3 + i * 0.4, 1.27, -D + 0.25], parent: room, cast: false });
+  box(9.4, 3.4, 0.1, '#2a2d34', { pos: [0, 2.9, -D + 0.14], parent: room });
+  // 프로젝터
+  rbox(0.9, 0.35, 0.7, 0.06, '#e6e8ec', { pos: [0, 4.75, -1.0], parent: room });
+  cyl(0.03, 0.03, 0.3, '#999', { pos: [0, 4.95, -1.0], parent: room });
+  cyl(0.1, 0.1, 0.06, emissive('#cfe6ff', 1.5), { pos: [0, 4.75, -1.37], rot: [Math.PI / 2, 0, 0], parent: room, cast: false });
   const drawBoard = (fn) => board.tex.redraw((g, w, h) => {
-    g.fillStyle = '#2f5a46'; g.fillRect(0, 0, w, h);
-    g.globalAlpha = 0.07; for (let i = 0; i < 60; i++) { g.fillStyle = '#fff'; g.fillRect(Math.random() * w, Math.random() * h, 120, 3); } g.globalAlpha = 1;
+    // 프로젝터 슬라이드 (어두운 남색 바탕 + 강의 헤더)
+    g.fillStyle = '#23305a'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2f4580'; g.fillRect(0, 0, w, 14);
+    g.fillStyle = '#9fb8f0'; g.font = `22px ${FONT}`; g.fillText('꿈나라대학교 · 2학기', w - 240, 390);
     fn(g, w, h);
   });
   function boardBio() {
     drawBoard((g) => {
-      g.fillStyle = '#ffffff'; g.font = `56px ${FONT}`; g.fillText('🌱 생물: 화분 실험 결과 분석', 50, 80);
+      g.fillStyle = '#ffffff'; g.font = `56px ${FONT}`; g.fillText('🌱 생명과학개론 · 화분 실험 결과', 50, 80);
       g.font = `38px ${FONT2}`;
       g.fillStyle = '#ffe9a6'; g.fillText('통제 변인 vs 조작 변인', 60, 150);
       g.fillStyle = '#ffffff';
       ['A: 빛 O · 물 O', 'B: 빛 O · 물 X', 'C: 빛 X · 물 O', 'D: 빛 O · 물 O · 밀봉'].forEach((t, i) => g.fillText(t, 60 + (i % 2) * 520, 220 + Math.floor(i / 2) * 60));
       g.fillStyle = '#ffb6c8'; g.font = `40px ${FONT}`; g.fillText('Q. C는 왜 노랗고 길쭉할까?', 60, 360);
-      g.fillStyle = '#fff'; g.font = `26px ${FONT2}`; g.fillText('날짜: 11월 3일 · 주번: 멍뭉', 860, 380);
+      g.fillStyle = '#fff'; g.font = `26px ${FONT2}`; g.fillText('Week 10', 50, 390);
     });
   }
   function boardMath() {
     drawBoard((g) => {
-      g.fillStyle = '#ffffff'; g.font = `54px ${FONT}`; g.fillText('📐 확률과 통계: 진단 검사의 함정', 50, 80);
+      g.fillStyle = '#ffffff'; g.font = `54px ${FONT}`; g.fillText('📊 통계학 · 베이즈 정리와 기저율', 50, 80);
       g.font = `36px ${FONT2}`;
       g.fillText('유병률  P(병) = 1%', 60, 150);
       g.fillText('민감도  P(양성 | 병) = 90%', 60, 205);
@@ -85,30 +99,32 @@ export function build(env) {
       g.fillStyle = '#ffffff'; g.font = `30px ${FONT2}`; g.fillText('1,000명', 870, 160);
       g.fillStyle = '#ff9eb5'; g.fillRect(740, 190, 40, 150);
       g.fillStyle = '#9fd8ff'; g.fillRect(800, 190, 320, 150);
-      g.fillStyle = '#2f5a46'; g.font = `26px ${FONT}`; g.fillText('10', 745, 270); g.fillText('990', 930, 270);
+      g.fillStyle = '#23305a'; g.font = `26px ${FONT}`; g.fillText('10', 745, 270); g.fillText('990', 930, 270);
     });
   }
   boardBio();
 
-  // 교탁 + 선생님
+  // 강연대 + 교수님
   const podium = group(room, [2.6, 0, -4.3]);
   rbox(1.8, 1.4, 0.9, 0.05, '#c9a57c', { pos: [0, 0.7, 0], parent: podium });
   rbox(2.0, 0.08, 1.0, 0.03, '#b48a5a', { pos: [0, 1.44, 0], parent: podium });
   // 출석부, 화분
-  rbox(0.5, 0.06, 0.7, 0.02, '#4a78c8', { pos: [-0.4, 1.51, 0], parent: podium });
+  rbox(0.7, 0.03, 0.5, 0.02, '#c9ccd2', { pos: [-0.3, 1.5, 0], parent: podium });
+  const lid = rbox(0.7, 0.45, 0.03, 0.02, '#c9ccd2', { pos: [-0.3, 1.72, -0.24], rot: [-0.25, 0, 0], parent: podium });
+  cyl(0.015, 0.015, 0.35, '#333', { pos: [0.5, 1.65, 0.2], rot: [0.5, 0, 0], parent: podium });
   const teacher = place(scene, npc('teacher'), [3.0, 0, -5.0], 0.15);
   actors.push(teacher);
 
   // 시계 / 스피커 / 급훈
   const cg = group(room, [-3.5, 4.55, -D + 0.18]);
   cyl(0.35, 0.35, 0.06, '#fff', { rot: [Math.PI / 2, 0, 0], parent: cg });
-  const motto = texPlane(2.4, 0.6, 400, 100, (g, w, h) => { g.fillStyle = '#fffbe8'; g.fillRect(0, 0, w, h); g.fillStyle = '#b05a7a'; g.font = `52px ${FONT}`; g.textAlign = 'center'; g.fillText('급훈: 꿈은 이루어진다', w / 2, 70); }, { pos: [0, 4.6, -D + 0.17], parent: room });
+  const motto = texPlane(2.4, 0.6, 400, 100, (g, w, h) => { g.fillStyle = '#fffbe8'; g.fillRect(0, 0, w, h); g.fillStyle = '#b05a7a'; g.font = `52px ${FONT}`; g.textAlign = 'center'; g.fillText('꿈나라대학교 · 공학관 301호', w / 2, 70); }, { pos: [-3.0, 4.6, -D + 0.17], parent: room });
   rbox(0.6, 0.4, 0.3, 0.05, '#efefef', { pos: [4.0, 4.55, -D + 0.3], parent: room });
 
   // 게시판
   const notice = texPlane(4, 2.2, 600, 330, (g, w, h) => {
     g.fillStyle = '#d9a86c'; g.fillRect(0, 0, w, h);
-    const papers = [['축제 D-1 🎮', '#ffe0ec'], ['코딩 동아리\n게임 부스', '#e0f0ff'], ['급식표\n오늘: 떡볶이', '#fff6cc'], ['분실물:\n민트 머리끈', '#e6ffe8']];
+    const papers = [['동아리 축제 D-1', '#ffe0ec'], ['코딩 동아리\n게임 부스', '#e0f0ff'], ['학생식당\n오늘: 떡볶이', '#fff6cc'], ['장학금\n신청 안내', '#e6ffe8']];
     papers.forEach(([t, c], i) => {
       const x = 20 + (i % 2) * 290, y = 20 + Math.floor(i / 2) * 155;
       g.save(); g.translate(x + 130, y + 65); g.rotate((i % 2 ? 1 : -1) * 0.04);
@@ -160,15 +176,23 @@ export function build(env) {
   /* 책상 + 학생들 */
   const deskCols = [-4.5, -1.5, 1.5, 4.5], deskRows = [-2.2, 0.4, 3.0];
   const students = [];
+  // 계단식 강의실: 뒤로 갈수록 한 단씩 높아진다
+  const rowH = [0, 0.3, 0.6];
+  rowH.forEach((h, ri) => { if (h) box(15.4, h, 2.6, '#c79a6a', { pos: [0, h / 2, deskRows[ri] + 0.55], parent: room }); });
+  box(15.4, 0.6, 1.4, '#c79a6a', { pos: [0, 0.3, 5.3], parent: room });
   deskCols.forEach((x, ci) => deskRows.forEach((z, ri) => {
-    desk(room, x, z, 0, '#e8cfa6', 1.7, 1.0, 1.2);
-    chair(room, x, z + 0.95, Math.PI, '#86a7d6');
-    // 책, 필통
-    rbox(0.5, 0.06, 0.7, 0.02, ['#ff9eb5', '#9fd8ff', '#ffe08a', '#b5e8c4'][(ci + ri) % 4], { pos: [x - 0.3, 1.27, z], rot: [0, 0.1 * (ci - ri), 0], parent: room });
+    const h = rowH[ri];
+    desk(room, x, z, 0, '#efe2cc', 2.6, 0.8, 1.2).position.y = h;
+    chair(room, x, z + 0.95, Math.PI, '#4a6fa8').position.y = h;
+    // 노트북 / 텀블러
+    const lp = group(room, [x - 0.3, 1.24 + h, z + 0.05], [0, 0.1 * (ci - ri), 0]);
+    rbox(0.6, 0.03, 0.42, 0.02, '#c9ccd2', { parent: lp });
+    rbox(0.6, 0.4, 0.02, 0.02, '#c9ccd2', { pos: [0, 0.2, -0.2], rot: [-0.25, 0, 0], parent: lp });
+    cyl(0.07, 0.06, 0.22, ['#ff9eb5', '#9fd8ff', '#ffe08a', '#b5e8c4'][(ci + ri) % 4], { pos: [x + 0.55, 1.35 + h, z], parent: room });
     const isMung = ci === 2 && ri === 1;
     if (!isMung && (ci + ri) % 3 !== 2) {
       const kind = ['student1', 'student2', 'student3'][(ci * 3 + ri) % 3];
-      const s = place(scene, npc(kind), [x, 0.38, z + 0.95], Math.PI, 'sitChair');
+      const s = place(scene, npc(kind), [x, 0.38 + h, z + 0.95], Math.PI, 'sitChair');
       s.root.rotation.y = Math.PI;
       students.push(s); actors.push(s);
     }
@@ -186,7 +210,7 @@ export function build(env) {
   box(0.3, H, 10, '#e2ecff', { pos: [6, H / 2, 0], parent: club });
   const sign = texPlane(4, 0.9, 520, 120, (g, w, h) => {
     g.fillStyle = '#2b2d42'; roundRect(g, 0, 0, w, h, 24); g.fill();
-    g.fillStyle = '#7cf5c4'; g.font = `60px ${FONT}`; g.textAlign = 'center'; g.fillText('</> 코딩 동아리', w / 2, 82);
+    g.fillStyle = '#7cf5c4'; g.font = `60px ${FONT}`; g.textAlign = 'center'; g.fillText('</> 중앙동아리 코딩', w / 2, 82);
   }, { glow: 0.4, pos: [0, 4.3, -4.83], parent: club });
   // 화이트보드
   const wb = texPlane(5, 2.4, 700, 336, (g, w, h) => {
@@ -307,10 +331,11 @@ export function build(env) {
   const say = talker(env.ui);
   const sc = {
     scene, actors, shots, focus, marker: mk,
+    cast: { '교수님': teacher, '옆자리 친구': students[3] || students[0], '하린': harin, '도윤': doyun, '서준': seojun, '지우': jiwoo },
     startShot: () => shots.seat,
     reset() {
       boardBio(); drawGit(false);
-      place(scene, mung, [1.5, 0.38, 1.35], Math.PI, 'slump', 'closed');
+      place(scene, mung, [1.5, 0.68, 1.35], Math.PI, 'slump', 'closed');
       teacher.root.position.set(3.0, 0, -5.0); teacher.setPose('idle');
       [harin, doyun].forEach(c => { c.setPose('angry'); c.setExpr('open'); });
       seojun.setPose('idle'); jiwoo.setPose('idle'); jiwoo.setExpr('sad');
@@ -326,49 +351,44 @@ export function build(env) {
       const { ui } = env;
       const T = teacher;
       // 방에서 잠든 멍뭉 → 꿈속에서도 책상에 엎드려 자고 있다
-      await ui.caption('…… 딩동댕동~', 1.4);
-      sfx.bell();
+      await ui.caption('☀ 오전 10시 · 꿈나라대학교 공학관 301호', 1.8);
       T.setPose('point');
-      await say(T, '선생님', '멍뭉 학생! 수업 시작했어요. 일어나세요~');
+      await say(T, '교수님', '멍뭉 학생! 출석 부를 때 자고 있으면 결석이에요~');
       mung.setPose('sitChair'); mung.setExpr('surprised');
       env.shake(0.08);
-      await say(mung, '멍뭉', '……헉! 어? 여기… 고등학교 교실? 분명 방에서 자고 있었는데…?');
+      await say(mung, '멍뭉', '……헉! 어? 대학교 강의실…? 분명 방에서 자고 있었는데…?');
       mung.setExpr('open');
-      await say(mung, '멍뭉', '(교복 대신 후드티 그대로네… 이거 완전 꿈이다.)');
+      await say(students[3] || students[0], '옆자리 친구', '(속닥) 멍뭉아, 너 코까지 골았어 ㅋㅋ 오늘 생명과학 실험 결과 발표날이야.');
+      await say(mung, '멍뭉', '(이거 완전 꿈이다… 그래도 수업은 들어야지.)');
       await env.cameraTo(shots.wide, 1.6);
-      env.cameraTo(shots.boardView, 1.5);
       T.setPose('point');
-      await say(T, '선생님', '자, 멍뭉 학생! 졸지 말고. 오늘은 일주일 동안 키운 화분 실험 결과를 볼 거예요.');
-      T.setPose('idle');
       await env.cameraTo(shots.pots, 1.8);
-      await say(T, '선생님', '창가의 A, B, C, D 화분을 잘 관찰하고, C에게 무슨 일이 있었는지 설명해 보세요.');
+      T.setPose('idle');
       if (await env.quiz('school1') === 'fail') return 'fail';
       mk.hide();
 
       await env.cameraTo(shots.seat, 1.2);
       T.setPose('cheer');
-      await say(T, '선생님', '정확해요! 변인 통제를 제대로 이해했군요. 👏');
+      await say(T, '교수님', '좋아요! 변인 통제를 제대로 이해했군요. 그럼 2교시 통계학으로 넘어갈게요.');
       T.setPose('idle');
       await env.cut(async () => { boardMath(); env.cameraSet(shots.boardView); });
-      sfx.bell();
-      await ui.caption('🔔 2교시 · 수학', 1.6);
-      await say(T, '선생님', '이번엔 확률이에요. 이 문제, 대부분 틀립니다. 직관 말고 숫자를 믿으세요.');
+      await ui.caption('📊 11시 · 통계학 강의', 1.4);
+      await say(T, '교수님', '이 문제는 수강생 대부분이 틀려요. 직관 말고 숫자를 믿으세요.');
       students.slice(0, 4).forEach(s => s.setPose('cheer'));
       emote(scene, students[1], '90%!', 2);
       emote(scene, students[3], '90%!!', 2);
-      await say(null, '반 친구들', '90%요!! 검사 정확도가 90%니까요!');
+      await say(null, '학생들', '90%요!! 검사 정확도가 90%니까요!');
       students.forEach(s => s.setPose('sitChair'));
       if (await env.quiz('school2') === 'fail') return 'fail';
 
-      await say(T, '선생님', '훌륭해요. "기저율"을 무시하면 이렇게 크게 틀리죠. 진짜 양성은 98명 중 9명뿐!');
-      // 방과 후 → 동아리방
-      sfx.bell();
-      await ui.caption('🔔 딩동댕~ 방과 후', 1.5);
+      await say(T, '교수님', '오늘 강의는 여기까지! 동아리 축제 준비하는 학생들은 힘내요~');
+      // 강의 끝 → 동아리방
+      await ui.caption('🕛 정오 · 학생회관 코딩 동아리방', 1.6);
       await env.cut(async () => {
         place(scene, mung, [CX - 5, 0, 2.5], Math.PI / 2, 'idle');
         env.cameraSet(shots.clubWide);
       }, '#fff');
-      walkTo(mung, CX - 2.6 + 1.3, 3.2, 2.2, Math.PI);
+      walkTo(mung, CX - 3.0, 3.4, 2.2, Math.PI - 0.6);
       emote(scene, harin, '💢', 2.5); emote(scene, doyun, '💢', 2.5);
       await say(harin, '하린', '도윤! 네가 어제 마지막까지 남아 있었잖아. 네가 지운 거지?!');
       await say(doyun, '도윤', '무슨 소리야! 난 노트북 꺼져서 아무것도 못 했어. 서준이 마지막에 사운드 올렸잖아!');
@@ -378,9 +398,8 @@ export function build(env) {
       await say(jiwoo, '지우', '……');
       await env.cameraTo(shots.clubMid, 1.2);
       mung.setPose('cheer');
-      await say(mung, '멍뭉', '잠깐잠깐! 다들 진정하고. 감정 말고 "기록"부터 보자.');
+      await say(mung, '멍뭉', '잠깐잠깐! 다들 진정하고. 감정 말고 "기록"부터 같이 보자.');
       mung.setPose('think');
-      await say(mung, '멍뭉', '(축제 하루 전인데 빌드가 통째로 사라졌다… 커밋 128개가 41개로?)');
       if (await env.quiz('school3') === 'fail') return 'fail';
       mk.hide();
 
@@ -399,8 +418,8 @@ export function build(env) {
       await env.cameraTo(shots.clubMid, 1.2);
       [harin, doyun, seojun, jiwoo, mung].forEach(c => { c.setPose('cheer'); c.setExpr('happy'); });
       await say(doyun, '도윤', '복구됐다!! 그리고 main 브랜치에 force push 금지 걸어놨어. 이제 이런 일 없을 거야!');
-      await say(harin, '하린', '멍뭉아 고마워! 우리 축제 끝나면 학교 앞 공원에서 떡볶이 먹자~');
-      await say(mung, '멍뭉', '좋아! 그럼 나 먼저 공원 한 바퀴 돌고 있을게. 다들 내일 축제 파이팅!');
+      await say(harin, '하린', '멍뭉아 고마워! 너 오늘 오후에 회사 출근이지? 조심히 가~');
+      await say(mung, '멍뭉', '응! 출근 전에 집 가는 길에 공원 좀 걷다 가려고. 다들 내일 축제 파이팅!');
       mung.setPose('idle'); mung.setExpr('happy');
       // 동아리방 문을 열고 나가면 → 공원
       env.cameraTo(shot([CX - 1.5, 2.6, 5.5], [CX - 5.6, 1.8, 2.5], 48), 1.6);

@@ -102,6 +102,8 @@ export function build(env) {
   // 산책하는 사람들
   const walker1 = place(park, npc('grandma'), [-6, 0, 12], 0.5, 'idle');
   const walker2 = place(park, npc('student3'), [7, 0, 4], -1.5, 'idle');
+  // 공원 관리인 아저씨 (동굴에 같이 들어가 단서를 함께 찾는다)
+  const ranger = npc('guard', { print: 'zip', top: '#6f8f4f', sleeve: '#6f8f4f', inner: '#f2efe6', cap: '#4a6a3a', hair: 'short', hairColor: '#777', glasses: false, pants: '#5a5040' });
 
   const hemiP = new THREE.HemisphereLight('#fff6f0', '#9fd486', 1.0); park.add(hemiP);
   const sunP = new THREE.DirectionalLight('#ffe6c4', 2.4);
@@ -357,9 +359,12 @@ export function build(env) {
   let flameWild = 0;
 
   const sc = {
-    scene: park, extraScenes: [cave], actors: [walker1, walker2], shots, focus, marker: mk,
+    scene: park, extraScenes: [cave], shots, focus, marker: mk,
+    cast: { '관리인 아저씨': ranger },
+    actors: [walker1, walker2, ranger],
     startShot: () => shots.wide,
     reset() {
+      place(park, ranger, [5.4, 0, -10.4], -1.2, 'idle');
       sc.scene = park;
       place(park, mung, [5.5, 0, 20], -2.6, 'idle');
       flooding = 0; flood.position.y = 0.02;
@@ -402,7 +407,7 @@ export function build(env) {
       mung.setExpr('happy');
       for (const u of pts) { const p = pathCurve.getPointAt(u); await walkTo(mung, p.x, p.z, 2.6); }
       mung.setExpr('open');
-      await say(mung, '멍뭉', '학교 앞 공원 도착~ 축제 준비로 머리 아팠는데, 이런 날은 산책이 최고지.');
+      await say(mung, '멍뭉', '집 가는 길에 공원 산책~ 오후 출근 전까지 시간 좀 있으니까 천천히 걸어야지.');
       const p70 = pathCurve.getPointAt(0.82); await walkTo(mung, p70.x, p70.z, 2.6);
       await env.cameraTo(shots.caveFront, 1.8);
       mung.setExpr('surprised');
@@ -410,39 +415,48 @@ export function build(env) {
       await say(mung, '멍뭉', '…어? 저기 언덕에… 동굴?! 매일 지나다니는 길인데, 저런 게 있었나?');
       await say(mung, '멍뭉', '"이 언덕에는 동굴이 없습니다 (어제까지)"… 뭐야 이 안내판…');
       mung.setExpr('open');
-      await say(mung, '멍뭉', '보랏빛이 새어 나와… 궁금해서 못 참겠다. 살짝만 들어가 보자!');
+      await turnTo(ranger, -2.4, 0.4);
+      await say(ranger, '관리인 아저씨', '어이 학생! 자네도 봤나? 아침에 출근해 보니 이 동굴이 생겨 있지 뭔가.');
+      await say(mung, '멍뭉', '보랏빛이 새어 나와요… 궁금해서 못 참겠어요. 같이 살짝만 들어가 봐요!');
+      await say(ranger, '관리인 아저씨', '허허, 나도 확인은 해야 하니… 조심해서 따라오게.');
+      walkTo(ranger, 0.9, -11.8, 2.2);
       await walkTo(mung, 0, -11.6, 2.2);
       await env.cameraTo(shots.caveIn, 1.4);
+      walkTo(ranger, 0.9, -13.6, 2.2);
       walkTo(mung, 0, -13.6, 2.2);
       await wait(0.6);
       // 동굴 내부로
       await ui.fadeTo('#000', 1, 0.8);
       sc.scene = cave;
       place(cave, mung, [0, 0, 5.5], Math.PI, 'idle');
+      place(cave, ranger, [1.4, 0, 6.0], Math.PI, 'idle');
       env.cameraSet(shots.c1);
       await ui.fadeTo('#000', 0, 0.8);
       sfx.rumble(); env.shake(0.5);
       mung.setPose('panic'); mung.setExpr('surprised');
       emote(cave, mung, '!!', 1.5);
       await say(mung, '멍뭉', '으악! 입구가… 무너졌어!!');
+      ranger.setPose('panic');
+      await say(ranger, '관리인 아저씨', '이런! 갇혀 버렸구먼. 침착하게 다른 출구를 찾아보세.');
+      ranger.setPose('idle');
+      walkTo(ranger, -0.6, 1.6, 2, Math.PI);
       mung.setPose('idle'); mung.setExpr('open');
       await walkTo(mung, -2.6, 2.2, 2, Math.PI - 0.4);
-      await say(mung, '멍뭉', '침착하자… 길은 세 갈래. 촛불 하나가 켜져 있네. 바람이 어디서 오는지 보면…');
+      await say(mung, '멍뭉', '길은 세 갈래네요. 바위 위에 촛불 하나가 켜져 있어요.');
       if (await env.quiz('cave1') === 'fail') return 'fail';
       mk.hide();
 
+      walkTo(ranger, 4.4, -6.2, 2.4);
       await walkTo(mung, 5.5, -6.8, 2.4);
       await say(mung, '멍뭉', '햇빛 냄새가 나! 이쪽이 맞아!');
       walkTo(mung, 5.5, -10, 2.4);
       await env.cut(async () => {
         place(cave, mung, [0, 0, Z2 + 5], Math.PI, 'idle');
+        place(cave, ranger, [1.6, 0, Z2 + 5.6], Math.PI - 0.3, 'idle');
         env.cameraSet(shots.c2);
       });
       flooding = 1; sfx.water();
-      await say(mung, '멍뭉', '…또 막혔다. 석문에 "4"가 새겨져 있고… 천장에서 물이 새고 있어!');
-      env.cameraTo(focus.jugs, 1.2);
-      await say(mung, '멍뭉', '눈금 없는 3L, 5L 항아리. 저울에 정확히 4L를 올려야 열리는 문인가 봐.');
-      await env.cameraTo(shots.c2, 1);
+      await say(mung, '멍뭉', '…또 막혔어요. 석문에 "4"가 새겨져 있어요!');
       if (await env.quiz('cave2') === 'fail') return 'fail';
       mk.hide();
 
@@ -462,12 +476,10 @@ export function build(env) {
       walkTo(mung, 3.6, Z2 - 9, 2.4);
       await env.cut(async () => {
         place(cave, mung, [0, 0, Z3 + 6], Math.PI, 'idle');
+        place(cave, ranger, [1.6, 0, Z3 + 6.5], Math.PI - 0.3, 'idle');
         env.cameraSet(shots.c3);
       });
-      await say(mung, '멍뭉', '마지막 방인가… 문이 네 개. 그리고 천장에 뭔가 쓰여 있어.');
-      env.cameraTo(focus.tablet, 1.2);
-      await say(mung, '멍뭉', '"참인 문장은 오직 하나, 진짜 출구도 오직 하나"… 논리 퍼즐이다!');
-      await env.cameraTo(shots.c3, 1.0);
+      await say(mung, '멍뭉', '마지막 방인가 봐요… 문이 네 개나 있어요.');
       if (await env.quiz('cave3') === 'fail') return 'fail';
       mk.hide();
 
@@ -479,6 +491,9 @@ export function build(env) {
       await anim(1.2, k => (exitLight.intensity = k * 60));
       mung.setPose('cheer'); mung.setExpr('happy');
       await say(mung, '멍뭉', '빛이다!! 탈출 성공~!!');
+      ranger.setPose('cheer'); ranger.setExpr('happy');
+      await say(ranger, '관리인 아저씨', '자네 덕분에 살았네! 얼른 가 보게, 출근 늦겠어!');
+      await say(mung, '멍뭉', '헉, 벌써 1시?! 오후 출근해야 돼요! 안녕히 계세요~');
       walkTo(mung, wp.x * 1.1, Z3 + (wp.z - Z3) * 1.1, 2.4);
       await ui.fadeTo('#fff', 1, 1.0);
       mung.setPose('idle'); mung.setExpr('open');

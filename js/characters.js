@@ -222,7 +222,7 @@ function hairMungmung(head) {
     if (p.y < -0.35) continue;
     if (p.z > 0.25 && p.y < 0.6 && Math.abs(p.x) < 0.8) continue;
     const m = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), p.y > 0.5 && Math.random() < 0.5 ? light : base);
-    m.scale.set(0.14, 0.07, 0.14);
+    m.scale.set(0.13, 0.045, 0.13);
     m.position.copy(p).multiplyScalar(0.56);
     m.position.y += 0.03;
     m.lookAt(m.position.clone().multiplyScalar(2));
@@ -771,16 +771,16 @@ export const makeChibi = opts => makeHuman(opts);
 /* 조연 프리셋 — 장면 코드의 예전 옵션(topKind/tie/vest…)도 그대로 받는다 */
 export function npc(kind, extra = {}) {
   const presets = {
-    teacher:   { print: 'vest', top: '#ffffff', vest: '#6f8a5e', sleeve: '#ffffff', tie: '#8a3a3a', hair: 'short', hairColor: '#2f2620', glasses: true, pants: '#555b66' },
-    student1:  { print: 'school', top: '#ffffff', blazer: '#24346a', sleeve: '#24346a', cuff: '#ffffff', ribbon: '#d0304a', hair: 'pony', hairColor: '#2d1f1a', pants: '#2f3f6a', blush: true },
-    student2:  { print: 'school', top: '#ffffff', blazer: '#24346a', sleeve: '#24346a', cuff: '#ffffff', tie: '#2f5fbf', hair: 'spiky', hairColor: '#1f1a17', pants: '#2a2f45' },
-    student3:  { print: 'school', top: '#ffffff', blazer: '#24346a', sleeve: '#24346a', cuff: '#ffffff', ribbon: '#d0304a', hair: 'bob', hairColor: '#4a2c1c', pants: '#2f3f6a', blush: true },
+    teacher:   { print: 'cardigan', top: '#4a5a7a', sleeve: '#4a5a7a', inner: '#f4f4f4', hair: 'short', hairColor: '#5a5048', glasses: true, pants: '#555b66', lashes: false },
+    student1:  { print: 'zip', top: '#f2c6d6', sleeve: '#f2c6d6', inner: '#ffffff', hair: 'pony', hairColor: '#2d1f1a', pants: '#6b7fa8', blush: true, lashes: true },
+    student2:  { print: 'hoodie', top: '#8fa3b8', sleeve: '#8fa3b8', logo: '#ffffff', logoText: 'DREAM U', hair: 'spiky', hairColor: '#1f1a17', pants: '#2a2f45' },
+    student3:  { print: 'cardigan', top: '#f2e4b8', sleeve: '#f2e4b8', inner: '#ffffff', hair: 'bob', hairColor: '#4a2c1c', pants: '#4a5a7a', skirt: '#4a5a7a', blush: true, lashes: true },
     office1:   { print: 'shirtTie', top: '#e4ecf8', sleeve: '#e4ecf8', tie: '#3d5a99', hair: 'short', hairColor: '#222', pants: '#333a4a', lanyard: '#3b82f6' },
-    office2:   { print: 'cardigan', top: '#f5d0da', sleeve: '#f5d0da', inner: '#ffffff', hair: 'bob', hairColor: '#3a2418', pants: '#4a4450', lanyard: '#3b82f6', blush: true },
-    office3:   { print: 'zip', top: '#bfe2cf', sleeve: '#bfe2cf', hair: 'pony', hairColor: '#2b1b14', pants: '#3a3a44', lanyard: '#3b82f6' },
+    office2:   { print: 'cardigan', top: '#f5d0da', sleeve: '#f5d0da', inner: '#ffffff', hair: 'bob', hairColor: '#3a2418', pants: '#4a4450', lanyard: '#3b82f6', blush: true , lashes: true },
+    office3:   { print: 'zip', top: '#bfe2cf', sleeve: '#bfe2cf', hair: 'pony', hairColor: '#2b1b14', pants: '#3a3a44', lanyard: '#3b82f6' , lashes: true },
     office4:   { print: 'hoodie', top: '#a6b4c8', sleeve: '#a6b4c8', hair: 'short', hairColor: '#4b3a2a', glasses: true, pants: '#2c2c34', lanyard: '#3b82f6' },
     driver:    { print: 'uniform', top: '#cfe0f0', sleeve: '#cfe0f0', tie: '#1d3a6b', hair: 'short', hairColor: '#555', pants: '#2b3448', cap: '#1d3a6b' },
-    grandma:   { print: 'cardigan', top: '#b07aa1', sleeve: '#b07aa1', inner: '#f4ead8', flower: true, hair: 'bun', hairColor: '#cfcfcf', glasses: true, pants: '#5a4a5a', blush: true },
+    grandma:   { print: 'cardigan', top: '#b07aa1', sleeve: '#b07aa1', inner: '#f4ead8', flower: true, hair: 'bun', hairColor: '#cfcfcf', glasses: true, pants: '#5a4a5a', blush: true , lashes: true },
     neighbor:  { print: 'hoodie', top: '#3b3f4a', sleeve: '#3b3f4a', logo: '#ff6060', logoText: '마왕', hair: 'spiky', hairColor: '#1e1e22', pants: '#22252c', headset: true },
     paramedic: { print: 'medic', top: '#e8743b', sleeve: '#e8743b', hair: 'short', hairColor: '#222', pants: '#2b3448', cap: '#e8743b' },
     guard:     { print: 'guard', top: '#7d8a62', sleeve: '#7d8a62', hair: 'bald', hairColor: '#999', glasses: true, pants: '#4a4a3a', cap: '#3a4a3a', beard: false },
