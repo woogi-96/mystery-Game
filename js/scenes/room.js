@@ -196,7 +196,7 @@ export function build(env) {
     g.fillStyle = '#ff6f98'; g.font = `30px ${FONT}`; g.textAlign = 'center'; g.fillText('♥', 140, 60);
     g.fillStyle = '#7a5a80'; g.font = `20px ${FONT}`; g.fillText('우기 ♥ 멍뭉', 140, 178);
   });
-  photo.position.set(-3.6, 3.0, -D + 0.17); scene.add(photo);
+  photo.position.set(-3.6, 3.0, -D + 0.2); scene.add(photo);
   box(1.55, 1.15, 0.06, '#c79b6d', { pos: [-3.6, 3.0, -D + 0.14], parent: scene });
 
   /* ───── 책상 + 맥미니 + 모니터 ───── */

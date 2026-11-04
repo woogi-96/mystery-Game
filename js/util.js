@@ -102,6 +102,8 @@ export function texPlane(w, h, pw, ph, draw, o = {}) {
     ? new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: o.glow, roughness: 0.6, transparent: !!o.transparent, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 })
     : new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, transparent: !!o.transparent, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
   const m = finish(new THREE.Mesh(new THREE.PlaneGeometry(w, h), material), { cast: false, receive: false, ...o });
+  // logarithmic depth buffer에서는 polygonOffset이 듣지 않아, 뒤판과 겹치지 않게 앞쪽으로 살짝 띄운다
+  m.translateZ(o.lift ?? 0.012);
   m.tex = tex;
   return m;
 }
