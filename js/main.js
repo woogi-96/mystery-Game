@@ -143,6 +143,16 @@ function getPop(key, p) {
   const lines = v.lines || (POP_INTRO[key] ? [[p.asker, POP_INTRO[key]]] : []);
   return shuffleQ({ ...p, ...v, lines }, hash(key) + state.round * 104729);
 }
+/* 진행 저장: 꿈이 시작될 때마다 저장 → 다시 들어오면 "이어서 하기" */
+const SAVE_KEY = 'mungmung_save';
+function saveProgress(ep) {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, ep, round: state.round, wrongTotal: state.wrongTotal, popRight: state.popRight, popTotal: state.popTotal, flags: state.flags, path: state.path, at: Date.now() })); } catch (e) { /* 저장 불가 환경 */ }
+}
+function loadProgress() {
+  try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return d && d.v === 1 && d.ep >= 0 && d.ep < EPISODES.length ? d : null; } catch (e) { return null; }
+}
+function clearProgress() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* 무시 */ } }
+
 function advanceRound() { state.round = (state.round + 1) % ROUNDS; saveRound(state.round); }
 
 const who = name => (name === '멍뭉' ? mung : (current && current.cast && current.cast[name]) || null);
@@ -383,6 +393,7 @@ async function playEpisodes(from) {
   for (let i = from; i < EP_MODS.length; i++) {
     state.ep = i;
     state.hearts = 3;
+    saveProgress(i);
     const ep = EPISODES[i];
     const [mod, key] = EP_MODS[i];
     const sc = getScene(mod, key);
@@ -433,6 +444,7 @@ async function runGame(fromEp = null) {
   ui.setEpisode('', 0, 0);
   const end = getScene(Ending, 'ending');
   if (result.clear) {
+    clearProgress(); // 끝까지 깼으면 이어 할 곳이 없다
     const choice = await end.happy(env, getScene(Room, 'room'));
     // "게임 다시 시작하기"를 눌렀을 때만 다음 판(새 문제)으로 넘어간다
     if (choice === 0) { advanceRound(); return runGame(null); }
@@ -455,7 +467,34 @@ function showTitle() {
   const t = document.getElementById('title');
   t.classList.remove('hidden');
   t.style.opacity = 1;
+  updateContinue();
   ui.fadeOut(1.2);
+}
+/* 시작 화면: 저장된 진행이 있으면 "이어서 하기 / 처음부터" */
+function updateContinue() {
+  const d = loadProgress();
+  const cBtn = document.getElementById('continueBtn');
+  const sBtn = document.getElementById('startBtn');
+  if (d) {
+    const ep = EPISODES[d.ep];
+    cBtn.classList.remove('hidden');
+    cBtn.innerHTML = `▶ 이어서 하기<small>꿈 ${ep.no} · ${ep.title}부터</small>`;
+    sBtn.textContent = '처음부터 하기';
+    sBtn.classList.add('second');
+  } else {
+    cBtn.classList.add('hidden');
+    sBtn.textContent = '꿈꾸러 가기 ▶';
+    sBtn.classList.remove('second');
+  }
+}
+async function beginPlay(fromEp) {
+  sfx.unlock();
+  sfx.startMusic();
+  document.getElementById('title').style.opacity = 0;
+  setTimeout(() => document.getElementById('title').classList.add('hidden'), 1000);
+  // 다른 씬들은 미리 만들어 둔다 (전환 때 끊김 방지)
+  setTimeout(() => EP_MODS.forEach(([m, k]) => getScene(m, k)), 50);
+  await runGame(fromEp);
 }
 
 /* ───────── 시작 ───────── */
@@ -468,15 +507,20 @@ async function boot() {
   document.getElementById('loading').textContent = '';
   const btn = document.getElementById('startBtn');
   btn.disabled = false;
-  btn.onclick = async () => {
-    sfx.unlock();
-    sfx.startMusic();
-    document.getElementById('title').style.opacity = 0;
-    setTimeout(() => document.getElementById('title').classList.add('hidden'), 1000);
-    // 다른 씬들은 미리 만들어 둔다 (전환 때 끊김 방지)
-    setTimeout(() => EP_MODS.forEach(([m, k]) => getScene(m, k)), 50);
-    await runGame(null);
+  // 처음부터: 저장된 진행을 지우고 새로 시작 (판=문제 구성은 그대로)
+  btn.onclick = async () => { clearProgress(); await beginPlay(null); };
+  // 이어서 하기: 마지막으로 들어간 꿈의 처음부터
+  const cBtn = document.getElementById('continueBtn');
+  cBtn.onclick = async () => {
+    const d = loadProgress();
+    if (!d) return beginPlay(null);
+    state.round = d.round ?? state.round;
+    state.wrongTotal = d.wrongTotal || 0; state.popRight = d.popRight || 0; state.popTotal = d.popTotal || 0;
+    state.flags = d.flags || {}; state.path = d.path || null;
+    state.sawPrologue = true;
+    await beginPlay(d.ep);
   };
+  updateContinue();
   const params = new URLSearchParams(location.search);
   if (params.has('view')) {
     // 디버그: ?view=1&shot=wide → 해당 꿈 장면을 정지 화면으로

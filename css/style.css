@@ -171,3 +171,11 @@ button { font-family: var(--font); cursor: pointer; border: none; }
 #askTimer .fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff8f6b, #ffcc4d); color: #6a3a10; font-size: 12px; line-height: 18px; text-align: right; padding-right: 8px; box-sizing: border-box; transition: width 0.1s linear; }
 @keyframes askIn { from { transform: translateX(-50%) scale(0.92); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 @keyframes popIn { from { transform: translateX(-50%) scale(0.92); } to { transform: translateX(-50%) scale(1); } }
+
+/* 시작 화면: 이어서 하기 / 처음부터 */
+.t-btns { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+#continueBtn { font-size: 22px; background: #7ccfb0; color: #fff; padding: 12px 30px; border-radius: 99px; box-shadow: 0 6px 0 #58b090, var(--shadow); display: flex; flex-direction: column; align-items: center; line-height: 1.25; transition: transform 0.15s; }
+#continueBtn small { font-size: 13px; opacity: 0.95; }
+#continueBtn:hover { transform: translateY(-3px); }
+#continueBtn.hidden { display: none; }
+#startBtn.second { font-size: 18px; padding: 12px 26px; background: #b49ad8; box-shadow: 0 6px 0 #9077bc, var(--shadow); }
