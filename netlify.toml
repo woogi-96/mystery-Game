@@ -1,0 +1,28 @@
+# Netlify 에서 멍뭉일지(diary 폴더)만 사이트로 올려요. 빌드 과정은 없어요.
+[build]
+  publish = "diary"
+  command = ""
+
+# 서버용 파일과 설정 스크립트는 사이트에서 보이지 않게
+[[redirects]]
+  from = "/server.js"
+  to = "/index.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/supabase/*"
+  to = "/index.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/package.json"
+  to = "/index.html"
+  status = 404
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "same-origin"
+    X-Robots-Tag = "noindex"

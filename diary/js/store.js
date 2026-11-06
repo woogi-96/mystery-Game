@@ -1,8 +1,10 @@
 // 데이터 저장소 — 세 가지 방식 중 열린 곳에 맞게 자동으로 골라요
 // - cloud : claude.ai 에 올린 페이지 → claude.ai 공용 저장소 (멍뭉이와 함께 봐요)
+// - supa  : GitHub Pages 등에 올리고 js/config.js 에 Supabase 주소를 넣으면 → Supabase 에 저장 (로그인 없이 함께 봐요)
 // - server: server.js 로 실행 → 서버(API)에 저장 (멍뭉이와 함께 봐요)
 // - local : 정적 호스팅(GitHub Pages 등) → 이 브라우저(IndexedDB)에만 저장
 import { DEFAULT_PROFILE, DEFAULT_TRAITS } from './defaults.js';
+import { SUPABASE } from './config.js';
 
 const API = 'api';
 const ADMIN_KEY = 'mm-admin-key';
@@ -43,6 +45,21 @@ function setAdminKey(v) {
   try { v ? sessionStorage.setItem(ADMIN_KEY, v) : sessionStorage.removeItem(ADMIN_KEY); } catch { /* 무시 */ }
 }
 
+// 업로드 가능한 형식(png/jpeg/gif/webp, 20MB)이 아니면 JPEG로 바꿔요 (아이폰 HEIC 등)
+async function normalizeImage(file) {
+  const ok = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type);
+  if (ok && file.size <= 19 * 1024 * 1024) return file;
+  const bmp = await createImageBitmap(file).catch(() => null);
+  if (!bmp) throw fail('이 사진 형식은 올릴 수 없어요. JPG나 PNG로 바꿔서 올려 주세요.');
+  const scale = Math.min(1, 3000 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * scale);
+  c.height = Math.round(bmp.height * scale);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+  return new File([blob], (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+}
+
 /* =====================================================================
  * 1) claude.ai 공용 저장소
  * ===================================================================== */
@@ -78,20 +95,6 @@ async function cloudBackend() {
   const allDocs = async (coll) => (await wrap(() => db.collection(coll).get())).docs;
   const needEditor = async () => { if (!(await isEditor())) throw fail('편집 권한이 있는 사람만 할 수 있어요', 401); };
 
-  // 업로드 가능한 형식(png/jpeg/gif/webp, 20MB)이 아니면 JPEG로 바꿔요 (아이폰 HEIC 등)
-  async function normalizeImage(file) {
-    const ok = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type);
-    if (ok && file.size <= 19 * 1024 * 1024) return file;
-    const bmp = await createImageBitmap(file).catch(() => null);
-    if (!bmp) throw fail('이 사진 형식은 올릴 수 없어요. JPG나 PNG로 바꿔서 올려 주세요.');
-    const scale = Math.min(1, 3000 / Math.max(bmp.width, bmp.height));
-    const c = document.createElement('canvas');
-    c.width = Math.round(bmp.width * scale);
-    c.height = Math.round(bmp.height * scale);
-    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
-    return new File([blob], (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
-  }
 
   return {
     mode: 'cloud',
@@ -237,6 +240,142 @@ async function cloudBackend() {
         (async () => (await db.collection('photos').get()).docs.map((d) => ({ id: d.id, ...d.data() })))(),
       ]);
       return { profile, traitOptions: settings.traitOptions, diary, stamps, places, photos };
+    },
+  };
+}
+
+/* =====================================================================
+ * 1-b) Supabase (로그인 없이 웹브라우저로 여는 공개 사이트용)
+ *      모든 데이터는 입장 비밀번호로 받은 토큰이 있어야 읽고 쓸 수 있어요 (supabase/setup.sql)
+ * ===================================================================== */
+function supaBackend() {
+  if (!SUPABASE?.url || !SUPABASE?.anonKey) return null;
+  const base = SUPABASE.url.replace(/\/+$/, '');
+  const BUCKET = 'mm-photos';
+  // 예전 anon 키(eyJ…)는 Authorization 에도 넣고, 새 publishable 키(sb_publishable_…)는 apikey 에만 넣어요
+  const headers = SUPABASE.anonKey.startsWith('sb_')
+    ? { apikey: SUPABASE.anonKey }
+    : { apikey: SUPABASE.anonKey, Authorization: `Bearer ${SUPABASE.anonKey}` };
+  let userTok = '';
+  const tok = () => adminKey() || userTok;
+
+  const MSG = {
+    mm_locked: '입장 비밀번호를 먼저 입력해 주세요',
+    mm_admin_only: '관리자만 할 수 있어요',
+    mm_too_many: '여러 번 틀려서 1분 동안 잠겼어요. 잠시 뒤에 다시 해 주세요.',
+    mm_bad_pin: '숫자 4자리로 정해 주세요',
+    mm_pin_exists: '이미 다른 기기에서 비밀번호를 정했어요. 정해 둔 비밀번호를 입력해 주세요.',
+    mm_bad_pw: '비밀번호는 4자 이상이어야 해요',
+    mm_too_big: '내용이 너무 길어요',
+  };
+  async function rpc(name, args = {}) {
+    let r;
+    try {
+      r = await fetch(`${base}/rest/v1/rpc/${name}`, {
+        method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(args),
+      });
+    } catch { throw fail('인터넷 연결을 확인해 주세요'); }
+    const text = await r.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!r.ok) {
+      const key = Object.keys(MSG).find((k) => (data?.message || '').includes(k));
+      throw fail(MSG[key] || '저장소에 연결하지 못했어요. 잠시 뒤에 다시 해 주세요.', key === 'mm_locked' || key === 'mm_admin_only' ? 401 : r.status);
+    }
+    return data;
+  }
+  const list = async (coll) => (await rpc('mm_list', { p_token: tok(), p_coll: coll })) || [];
+  const get = (coll, id) => rpc('mm_get', { p_token: tok(), p_coll: coll, p_id: id });
+  const put = (coll, id, data) => rpc('mm_put', { p_token: tok(), p_coll: coll, p_id: id, p_data: data });
+  const del = (coll, id) => rpc('mm_del', { p_token: tok(), p_coll: coll, p_id: id });
+  const fileUrl = (file) => `${base}/storage/v1/object/public/${BUCKET}/${file}`;
+  const removeFile = (file) => fetch(`${base}/storage/v1/object/${BUCKET}/${file}`, { method: 'DELETE', headers }).catch(() => {});
+  const byDateDesc = (a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || '');
+
+  return {
+    mode: 'supa',
+    getProfile: async () => ({ ...structuredClone(DEFAULT_PROFILE), ...(await get('app', 'profile')) }),
+    saveProfile: (p) => put('app', 'profile', p).then(() => p),
+    getSettings: async () => ({ traitOptions: DEFAULT_TRAITS, ...(await get('app', 'settings')) }),
+    saveSettings: (s) => put('app', 'settings', { traitOptions: s.traitOptions }).then(() => s),
+
+    getDiary: async () => Object.fromEntries((await list('diary')).map((d) => [d.id, d.data])),
+    saveDiary: async (date, text) => { const e = { text, at: new Date().toISOString() }; await put('diary', date, e); return e; },
+    deleteDiary: (date) => del('diary', date),
+
+    listPhotos: async () => (await list('photos'))
+      .map((d) => ({ ...d.data, id: d.id, src: fileUrl(d.data.file), downloadUrl: `${fileUrl(d.data.file)}?download=${encodeURIComponent(d.data.name || 'photo.jpg')}` }))
+      .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)),
+    uploadPhoto: async (file, caption = '', extra = {}) => {
+      if (!tok()) throw fail('입장 비밀번호를 먼저 입력해 주세요', 401);
+      const img = await normalizeImage(file);
+      const id = newId();
+      const name = `${crypto.randomUUID ? crypto.randomUUID() : randomSalt() + randomSalt()}${extOf(img.type)}`;
+      const r = await fetch(`${base}/storage/v1/object/${BUCKET}/${name}`, {
+        method: 'POST', headers: { ...headers, 'content-type': img.type, 'x-upsert': 'false' }, body: img,
+      }).catch(() => null);
+      if (!r || !r.ok) throw fail(r?.status === 413 ? '사진이 너무 커요 (최대 20MB)' : '사진을 올리지 못했어요. 다시 해 주세요.');
+      const meta = { file: name, name: img.name || `photo${extOf(img.type)}`, caption, type: img.type, size: img.size, uploadedAt: new Date().toISOString(), ...photoExtra(extra) };
+      try { await put('photos', id, meta); } catch (e) { removeFile(name); throw e; }
+      return { ...meta, id };
+    },
+    deletePhoto: async (id) => {
+      const p = await get('photos', id);
+      await del('photos', id);
+      if (p?.file) await removeFile(p.file);
+    },
+    downloadPhoto: null,
+    saveFile: null,
+
+    getPlaces: async () => (await list('places')).map((d) => ({ ...d.data, id: d.id })).sort(byDateDesc),
+    savePlace: async (p) => {
+      const body = cleanPlace(p);
+      const id = p.id || newId();
+      const createdAt = p.createdAt || new Date().toISOString();
+      await put('places', id, { ...body, createdAt });
+      return { ...body, createdAt, id };
+    },
+    deletePlace: (id) => del('places', id),
+
+    getStamps: async () => Object.fromEntries((await list('stamps')).map((d) => [d.id, d.data])),
+    setStamp: (date, on) => (on ? put('stamps', date, { at: new Date().toISOString() }) : del('stamps', date)),
+
+    // 입장 비밀번호: 모두가 같은 4자리를 써요 (Supabase 에 암호화해서 저장)
+    lockState: async (token) => {
+      const st = await rpc('mm_status');
+      if (!st.pin_set) return { set: false };
+      if (token && (await rpc('mm_check', { p_token: token }))) { userTok = token; return { set: true, remembered: true }; }
+      return { set: true, remembered: false };
+    },
+    setPin: async (pin) => { userTok = await rpc('mm_set_pin', { p_pin: pin }); return userTok; },
+    unlock: async (pin) => {
+      const t = await rpc('mm_unlock', { p_pin: pin });
+      if (t) userTok = t;
+      return t || null;
+    },
+    canResetOwnPin: false,
+    resetPin: () => rpc('mm_reset_pin', { p_token: adminKey() }),
+
+    wipe: async (kinds = WIPE_KINDS) => {
+      if (kinds.includes('photos')) for (const d of await list('photos')) if (d.data.file) await removeFile(d.data.file);
+      await rpc('mm_wipe', { p_token: adminKey(), p_colls: kinds });
+    },
+
+    // 관리자: 처음 로그인할 때 쓴 비밀번호가 관리자 비밀번호가 돼요
+    usesPassword: true,
+    isAdmin: async () => !!adminKey() && (await rpc('mm_check', { p_token: adminKey() }).catch(() => null)) === 'admin',
+    login: async (pw) => {
+      const t = await rpc('mm_admin_login', { p_pw: pw });
+      if (!t) throw fail('비밀번호가 틀렸어요', 401);
+      setAdminKey(t);
+      return true;
+    },
+    logout: () => setAdminKey(''),
+    changePassword: (next) => rpc('mm_admin_password', { p_token: adminKey(), p_new: next }),
+    exportAll: async () => {
+      const [profile, settings, diary, stamps, places, photos] = await Promise.all([
+        get('app', 'profile'), get('app', 'settings'), list('diary'), list('stamps'), list('places'), list('photos')]);
+      const obj = (arr) => Object.fromEntries(arr.map((d) => [d.id, d.data]));
+      return { profile, traitOptions: settings?.traitOptions || DEFAULT_TRAITS, diary: obj(diary), stamps: obj(stamps), places: places.map((d) => ({ id: d.id, ...d.data })), photos: photos.map((d) => ({ id: d.id, ...d.data, url: fileUrl(d.data.file) })) };
     },
   };
 }
@@ -459,7 +598,7 @@ function localBackend() {
   };
 }
 
-export const store = (await cloudBackend()) || (await serverBackend()) || localBackend();
+export const store = (await cloudBackend()) || supaBackend() || (await serverBackend()) || localBackend();
 store.local = store.mode === 'local';
 
 /* ---------- 날짜 유틸 (항상 사용자 기기 기준 날짜) ---------- */
