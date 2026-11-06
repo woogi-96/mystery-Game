@@ -2,82 +2,10 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#fff6e3" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>멍뭉일지 관리자</title>
-  <meta name="robots" content="noindex" />
-  <link rel="icon" href="assets/favicon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/diary.css" />
+  <meta http-equiv="refresh" content="0; url=index.html#admin" />
+  <script>location.replace('index.html#admin');</script>
 </head>
-<body class="admin">
-  <header class="site-header">
-    <a class="brand" href="index.html">
-      <img src="assets/meongmung-sm.jpg" alt="" />
-      <span>멍뭉일지 <small style="font-size:.9rem;color:var(--muted)">관리자</small></span>
-    </a>
-    <nav class="top-links">
-      <a href="index.html">← 사이트</a>
-      <a href="#" id="logoutBtn" hidden>로그아웃</a>
-    </nav>
-  </header>
-
-  <main>
-    <section class="card admin-login" id="loginBox" hidden>
-      <img src="assets/meongmung-sm.jpg" alt="" />
-      <h2>관리자 로그인</h2>
-      <p class="muted small">일기·사진·소개서를 관리하려면 비밀번호를 입력해 주세요.</p>
-      <form id="loginForm">
-        <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password" required />
-        <button class="btn primary" type="submit">로그인</button>
-      </form>
-    </section>
-
-    <section id="adminBox" hidden>
-      <div class="admin-tabs" id="adminTabs">
-        <button data-t="diary" class="active">📒 일기</button>
-        <button data-t="photos">📸 사진</button>
-        <button data-t="profile">🐾 소개서 특징</button>
-        <button data-t="settings">⚙️ 설정</button>
-      </div>
-
-      <div class="card" data-panel="diary">
-        <h3>한 줄 일기 관리</h3>
-        <ul class="list" id="diaryRows"></ul>
-      </div>
-
-      <div class="card" data-panel="photos" hidden>
-        <h3>사진 관리</h3>
-        <div class="admin-photos" id="photoGrid"></div>
-      </div>
-
-      <div class="card" data-panel="profile" hidden>
-        <h3>소개서 특징 보기 관리</h3>
-        <p class="muted small">소개 페이지에서 고를 수 있는 특징 목록이에요. 칩을 누르면 삭제돼요.</p>
-        <form class="stack" id="traitForm" style="margin-bottom:14px">
-          <input id="traitInput" maxlength="20" placeholder="새 특징 (예: 고양이 좋아해요)" required />
-          <button class="btn primary" type="submit">추가</button>
-        </form>
-        <div class="chips" id="traitList"></div>
-        <div style="margin-top:16px">
-          <button class="btn primary block" id="traitSave">특징 목록 저장</button>
-        </div>
-      </div>
-
-      <div class="card" data-panel="settings" hidden>
-        <h3>설정</h3>
-        <p class="muted small" id="adminMode"></p>
-        <form class="stack" id="pwForm" style="margin:12px 0 20px">
-          <input type="password" id="newPw" minlength="4" placeholder="새 관리자 비밀번호 (4자 이상)" required autocomplete="new-password" />
-          <button class="btn primary" type="submit">비밀번호 변경</button>
-        </form>
-        <button class="btn block" id="exportBtn">⬇ 전체 데이터 백업 (JSON)</button>
-      </div>
-    </section>
-  </main>
-
-  <script type="module" src="js/admin.js"></script>
-</body>
+<body><a href="index.html#admin">관리자 페이지로 이동</a></body>
 </html>

@@ -1,10 +1,10 @@
-import { store, dateKey, escapeHtml, toast } from './store.js';
+import { store, dateKey, escapeHtml, toast, downloadPhoto } from './store.js';
 import { meongmungImg, meongmungSmall, pawStampSVG } from './character.js';
 import { GREETINGS, timePhase } from './greeting.js';
 import { computeGrowth, LEVELS, REWARDS, TIPS } from './growth.js';
 
 const $ = (s, el = document) => el.querySelector(s);
-const PAGES = ['intro', 'today', 'together', 'growth'];
+const PAGES = ['intro', 'today', 'together', 'growth', 'admin'];
 const loaded = {};
 
 /* ---------- 라우팅 ---------- */
@@ -14,11 +14,12 @@ function route() {
   document.querySelectorAll('.tabs a').forEach((a) => a.classList.toggle('active', a.dataset.tab === page));
   if (!loaded[page]) {
     loaded[page] = true;
-    ({ intro: initIntro, today: initToday, together: initTogether, growth: initGrowth })[page]().catch(showError);
+    ({ intro: initIntro, today: initToday, together: initTogether, growth: initGrowth, admin: initAdmin })[page]().catch(showError);
   }
   if (page === 'growth' && loaded.growthReady) {
     renderGrowth().catch(showError);
   }
+  if (page === 'admin' && adminMod) adminMod.refresh();
   window.scrollTo({ top: 0 });
 }
 function showError(e) {
@@ -33,8 +34,14 @@ document.querySelectorAll('[data-scroll]').forEach((a) => a.addEventListener('cl
 }));
 
 $('#modeNote').textContent = store.local
-  ? '💾 지금은 이 브라우저에만 저장돼요 (서버로 실행하면 함께 볼 수 있어요)'
+  ? '💾 지금은 이 브라우저에만 저장돼요'
   : '☁️ 멍뭉이와 함께 보는 공용 일지예요';
+
+let adminMod = null;
+async function initAdmin() {
+  adminMod = await import('./admin.js');
+  adminMod.init();
+}
 
 /* ---------- 1. 소개 ---------- */
 /* 시간대 인사 (1분마다 확인해서 아침 → 점심 → 저녁이 바뀌면 갱신) */
@@ -286,19 +293,18 @@ async function renderGallery() {
       <img src="${p.src}" alt="${escapeHtml(p.caption || p.name)}" loading="lazy" />
       <figcaption>
         <span>${escapeHtml(p.caption || '')}<br><span class="date">${new Date(p.uploadedAt).toLocaleDateString('ko-KR')}</span></span>
-        <a class="dl" href="${p.downloadUrl}" download="${escapeHtml(p.name)}" title="다운로드" aria-label="다운로드">⬇️</a>
+        <button class="dl" type="button" data-i="${i}" title="다운로드" aria-label="다운로드">⬇️</button>
       </figcaption>
     </figure>`).join('');
   g.onclick = (e) => {
-    if (e.target.closest('.dl')) return;
+    const dlBtn = e.target.closest('.dl');
+    if (dlBtn) { downloadPhoto(photos[+dlBtn.dataset.i]); return; }
     const f = e.target.closest('.photo');
     if (!f) return;
     const p = photos[+f.dataset.i];
     $('#lbImg').src = p.src;
     $('#lbCaption').textContent = p.caption || p.name;
-    const dl = $('#lbDownload');
-    dl.href = p.downloadUrl;
-    dl.setAttribute('download', p.name);
+    $('#lbDownload').onclick = () => downloadPhoto(p);
     $('#lightbox').showModal();
   };
 }

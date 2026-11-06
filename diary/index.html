@@ -173,6 +173,71 @@
         <ul class="tip-list" id="tipList"></ul>
       </div>
     </section>
+    <!-- 관리자 (하단 탭에는 없고, 맨 아래 "관리자" 링크로 들어와요) -->
+    <section class="page" id="page-admin" hidden>
+
+      <div class="head-row admin-head">
+        <h2>🛠️ 관리자</h2>
+        <button class="btn sm" id="logoutBtn" type="button" hidden>로그아웃</button>
+      </div>
+    <section class="card admin-login" id="noAccess" hidden>
+      <img src="assets/meongmung-sm.jpg" alt="" />
+      <h2>관리자만 들어올 수 있어요</h2>
+      <p class="muted small">claude.ai 에서 이 페이지를 편집할 수 있는 사람(주인, 편집자)만 일기와 사진을 지울 수 있어요.</p>
+      <a class="btn" href="#intro">← 처음으로</a>
+    </section>
+    <section class="card admin-login" id="loginBox" hidden>
+      <img src="assets/meongmung-sm.jpg" alt="" />
+      <h2>관리자 로그인</h2>
+      <p class="muted small">일기·사진·소개서를 관리하려면 비밀번호를 입력해 주세요.</p>
+      <form id="loginForm">
+        <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password" required />
+        <button class="btn primary" type="submit">로그인</button>
+      </form>
+    </section>
+
+    <section id="adminBox" hidden>
+      <div class="admin-tabs" id="adminTabs">
+        <button data-t="diary" class="active">📒 일기</button>
+        <button data-t="photos">📸 사진</button>
+        <button data-t="profile">🐾 소개서 특징</button>
+        <button data-t="settings">⚙️ 설정</button>
+      </div>
+
+      <div class="card" data-panel="diary">
+        <h3>한 줄 일기 관리</h3>
+        <ul class="list" id="diaryRows"></ul>
+      </div>
+
+      <div class="card" data-panel="photos" hidden>
+        <h3>사진 관리</h3>
+        <div class="admin-photos" id="photoGrid"></div>
+      </div>
+
+      <div class="card" data-panel="profile" hidden>
+        <h3>소개서 특징 보기 관리</h3>
+        <p class="muted small">소개 페이지에서 고를 수 있는 특징 목록이에요. 칩을 누르면 삭제돼요.</p>
+        <form class="stack" id="traitForm" style="margin-bottom:14px">
+          <input id="traitInput" maxlength="20" placeholder="새 특징 (예: 고양이 좋아해요)" required />
+          <button class="btn primary" type="submit">추가</button>
+        </form>
+        <div class="chips" id="traitList"></div>
+        <div style="margin-top:16px">
+          <button class="btn primary block" id="traitSave">특징 목록 저장</button>
+        </div>
+      </div>
+
+      <div class="card" data-panel="settings" hidden>
+        <h3>설정</h3>
+        <p class="muted small" id="adminMode"></p>
+        <form class="stack" id="pwForm" hidden style="margin:12px 0 20px">
+          <input type="password" id="newPw" minlength="4" placeholder="새 관리자 비밀번호 (4자 이상)" required autocomplete="new-password" />
+          <button class="btn primary" type="submit">비밀번호 변경</button>
+        </form>
+        <button class="btn block" id="exportBtn">⬇ 전체 데이터 백업 (JSON)</button>
+      </div>
+    </section>
+    </section>
   </main>
 
   <nav class="tabs" aria-label="메뉴">
@@ -184,7 +249,7 @@
 
   <footer class="site-footer">
     <span id="modeNote"></span>
-    <a href="admin.html">관리자</a>
+    <a href="#admin">관리자</a>
   </footer>
 
   <!-- 사진 크게 보기 -->
@@ -193,7 +258,7 @@
     <img id="lbImg" alt="" />
     <div class="lb-foot">
       <span id="lbCaption"></span>
-      <a class="btn primary" id="lbDownload" download>⬇ 다운로드</a>
+      <button class="btn primary" id="lbDownload" type="button">⬇ 다운로드</button>
     </div>
   </dialog>
 

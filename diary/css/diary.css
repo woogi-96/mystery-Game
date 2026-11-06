@@ -53,9 +53,9 @@ img { max-width: 100%; display: block; }
 
 /* ---------- 상단 바 ---------- */
 .site-header {
-  position: sticky; top: 0; z-index: 20;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
+  padding: 10px 16px;
   background: rgba(255, 246, 227, 0.92);
   backdrop-filter: blur(10px);
   border-bottom: 2px dashed var(--line);
@@ -85,6 +85,7 @@ img { max-width: 100%; display: block; }
 .tabs a.active .ic { transform: translateY(-2px) scale(1.12); filter: none; opacity: 1; }
 
 main { padding: 16px 16px 8px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 25; background: var(--bg); }
 .page { animation: pageIn .3s ease; }
 @keyframes pageIn { from { opacity: 0; transform: translateY(8px); } }
 
@@ -335,3 +336,9 @@ body.admin #toasts { bottom: 20px; }
 .btn-row { display: flex; gap: 8px; justify-content: flex-end; }
 .head-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
 .head-row h3 { margin: 0; }
+.photo .dl { border: 0; background: none; cursor: pointer; }
+.admin-head { margin: 4px 0 12px; }
+.admin-head h2 { margin: 0; color: var(--brown); }
+dialog.confirm-dlg { border: 0; border-radius: 18px; padding: 20px; width: min(calc(100vw - 32px), 360px); background: var(--card); color: var(--ink); box-shadow: 0 12px 30px rgba(0,0,0,.2); }
+dialog.confirm-dlg::backdrop { background: rgba(40, 25, 10, .55); }
+dialog.confirm-dlg p { margin: 0 0 16px; font-size: 1rem; }
