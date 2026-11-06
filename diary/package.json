@@ -1,0 +1,13 @@
+{
+  "name": "meongmung-diary",
+  "version": "1.0.0",
+  "private": true,
+  "description": "멍뭉일지 - 멍뭉이의 하루를 기록하는 웹사이트",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

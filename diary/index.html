@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#fff6e3" />
+  <title>멍뭉일지</title>
+  <meta name="description" content="멍뭉이의 하루를 기록하는 작은 일지" />
+  <link rel="icon" href="assets/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/diary.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#intro">
+      <img src="assets/meongmung-sm.jpg" alt="" />
+      <span>멍뭉일지</span>
+    </a>
+  </header>
+
+  <main>
+    <!-- 1. 소개 -->
+    <section class="page" id="page-intro" hidden>
+      <div class="hero card">
+        <div class="hero-art" id="heroArt"></div>
+        <div class="hero-text">
+          <p class="eyebrow">멍뭉이의 하루를 기록하는 곳</p>
+          <h1>안녕! 여기는 <em>멍뭉일지</em>야</h1>
+          <p>귀여운 멍뭉이가 매일 한 줄씩 하루를 남기고, 사진을 나누고, 신조어 퀴즈도 푸는 우리만의 작은 일지예요.</p>
+          <a class="btn primary" href="#today">오늘 일기 쓰러 가기 →</a>
+        </div>
+      </div>
+
+      <h2 class="section-title">멍뭉일지 사용법</h2>
+      <div class="howto">
+        <a class="how card" href="#intro" data-scroll="profile">
+          <span class="how-icon">🐾</span>
+          <h3>1. 소개</h3>
+          <p>멍뭉이 소개서를 써요. 이름·나이·매력을 적고, 특징을 골라 <b>저장</b>하면 끝!</p>
+        </a>
+        <a class="how card" href="#today">
+          <span class="how-icon">📒</span>
+          <h3>2. 오늘의 멍뭉</h3>
+          <p>매일 <b>한 줄 일기</b>를 써요. 쓰면 달력에 발바닥 도장이 쾅! 출석 체크돼요.</p>
+        </a>
+        <a class="how card" href="#together">
+          <span class="how-icon">📸</span>
+          <h3>3. 멍뭉이와 함께</h3>
+          <p>함께 보고 싶은 <b>사진을 올리고</b>, 마음에 드는 사진은 <b>다운로드</b>할 수 있어요.</p>
+        </a>
+        <a class="how card" href="#quiz">
+          <span class="how-icon">💡</span>
+          <h3>4. 멍뭉 퀴즈</h3>
+          <p>매일 <b>신조어 퀴즈</b>가 1개씩! 틀리면 정답과 이유를 알려줘요.</p>
+        </a>
+      </div>
+
+      <h2 class="section-title" id="profile">멍뭉이 소개서</h2>
+      <form class="card profile" id="profileForm">
+        <div class="profile-photo">
+          <img src="assets/meongmung-sm.jpg" alt="멍뭉 프로필 사진" />
+          <span class="badge">인증된 귀요미</span>
+        </div>
+        <div class="profile-fields">
+          <label>이름 <input name="name" maxlength="20" required /></label>
+          <label>나이 <input name="age" maxlength="20" /></label>
+          <label>매력 <input name="charm" maxlength="40" /></label>
+          <label>한마디 <input name="oneLiner" maxlength="60" placeholder="예) 오늘도 멍뭉 최고" /></label>
+        </div>
+        <fieldset class="traits">
+          <legend>특징 <small>(여러 개 골라도 돼요)</small></legend>
+          <div class="chips" id="traitChips"></div>
+        </fieldset>
+        <div class="form-foot">
+          <button class="btn primary" type="submit">저장</button>
+          <span class="muted small" id="profileSaved"></span>
+        </div>
+      </form>
+    </section>
+
+    <!-- 2. 오늘의 멍뭉 -->
+    <section class="page" id="page-today" hidden>
+      <div class="card diary-write">
+        <div class="diary-head">
+          <img src="assets/meongmung-sm.jpg" alt="" class="avatar" />
+          <div>
+            <p class="eyebrow" id="todayLabel"></p>
+            <h2>오늘의 멍뭉은 어땠나요?</h2>
+          </div>
+        </div>
+        <form id="diaryForm" class="diary-form">
+          <input id="diaryInput" maxlength="80" autocomplete="off" placeholder="한 줄로 오늘을 남겨 주세요 (최대 80자)" required />
+          <button class="btn primary" type="submit" id="diaryBtn">출석 도장 쾅!</button>
+        </form>
+        <p class="muted small" id="diaryCount"></p>
+      </div>
+
+      <div class="stats" id="diaryStats"></div>
+
+      <div class="card calendar">
+        <div class="cal-head">
+          <button class="icon-btn" id="calPrev" aria-label="이전 달">‹</button>
+          <h3 id="calTitle"></h3>
+          <button class="icon-btn" id="calNext" aria-label="다음 달">›</button>
+        </div>
+        <div class="cal-grid cal-week">
+          <span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span>
+        </div>
+        <div class="cal-grid" id="calDays"></div>
+        <div class="cal-detail" id="calDetail"></div>
+      </div>
+    </section>
+
+    <!-- 3. 멍뭉이와 함께 -->
+    <section class="page" id="page-together" hidden>
+      <div class="card upload">
+        <h2>멍뭉이와 함께 📸</h2>
+        <p class="muted">같이 보고 싶은 사진을 올려 주세요. 사진을 누르면 크게 보고 다운로드할 수 있어요.</p>
+        <form id="uploadForm">
+          <label class="drop" id="drop">
+            <input type="file" id="fileInput" accept="image/*" multiple />
+            <span class="drop-icon">＋</span>
+            <span id="dropText">여기를 눌러 사진 고르기 (또는 끌어다 놓기)</span>
+          </label>
+          <div class="upload-row">
+            <input id="captionInput" maxlength="60" placeholder="사진 한마디 (선택)" />
+            <button class="btn primary" type="submit" id="uploadBtn" disabled>올리기</button>
+          </div>
+        </form>
+      </div>
+      <div class="gallery" id="gallery"></div>
+    </section>
+
+    <!-- 4. 멍뭉 퀴즈 -->
+    <section class="page" id="page-quiz" hidden>
+      <div class="card quiz" id="quizCard"></div>
+      <div class="stats" id="quizStats"></div>
+      <div class="card">
+        <h3>지난 퀴즈</h3>
+        <ul class="history" id="quizHistory"></ul>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs" aria-label="메뉴">
+      <a href="#intro" data-tab="intro"><span class="ic">🐾</span> 소개</a>
+      <a href="#today" data-tab="today"><span class="ic">📒</span> 오늘의 멍뭉</a>
+      <a href="#together" data-tab="together"><span class="ic">📸</span> 멍뭉이와 함께</a>
+      <a href="#quiz" data-tab="quiz"><span class="ic">💡</span> 멍뭉 퀴즈</a>
+  </nav>
+
+  <footer class="site-footer">
+    <span id="modeNote"></span>
+    <a href="admin.html">관리자</a>
+  </footer>
+
+  <!-- 사진 크게 보기 -->
+  <dialog id="lightbox">
+    <button class="icon-btn close" id="lbClose" aria-label="닫기">✕</button>
+    <img id="lbImg" alt="" />
+    <div class="lb-foot">
+      <span id="lbCaption"></span>
+      <a class="btn primary" id="lbDownload" download>⬇ 다운로드</a>
+    </div>
+  </dialog>
+
+  <!-- 정답 동그라미 -->
+  <div id="ox" aria-hidden="true">
+    <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="78" /></svg>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
