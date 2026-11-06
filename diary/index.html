@@ -13,6 +13,23 @@
   <link rel="stylesheet" href="css/diary.css" />
 </head>
 <body>
+  <!-- 입장 잠금 화면: 처음엔 비밀번호 4자리 정하기, 그 다음부터는 이 기기에서 바로 들어와요 -->
+  <div class="lock" id="lock" hidden>
+    <div class="lock-card">
+      <img class="lock-char" src="assets/meongmung-sm.jpg" alt="" />
+      <h1 class="lock-title" id="lockTitle">멍뭉일지</h1>
+      <p class="lock-sub" id="lockSub"></p>
+      <div class="pin-dots" id="pinDots" aria-live="polite"><i></i><i></i><i></i><i></i></div>
+      <p class="lock-msg" id="lockMsg"></p>
+      <div class="keypad" id="keypad">
+        <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+        <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+        <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+        <span></span><button type="button">0</button><button type="button" data-k="del" aria-label="지우기">⌫</button>
+      </div>
+      <button class="lock-forgot" id="lockForgot" type="button" hidden>비밀번호를 잊었어요</button>
+    </div>
+  </div>
   <header class="site-header">
     <a class="brand" href="#intro">
       <img src="assets/meongmung-sm.jpg" alt="" />
@@ -99,6 +116,7 @@
           <button class="btn primary" type="submit" id="diaryBtn">출석 도장 쾅!</button>
         </form>
         <p class="muted small" id="diaryCount"></p>
+        <div class="today-praise" id="todayPraise" hidden></div>
       </div>
 
       <div class="stats" id="diaryStats"></div>
@@ -177,14 +195,14 @@
     <section class="page" id="page-admin" hidden>
 
       <div class="head-row admin-head">
-        <h2>🛠️ 관리자</h2>
+        <h2>🛠️ 멍뭉일지 관리자</h2>
         <button class="btn sm" id="logoutBtn" type="button" hidden>로그아웃</button>
       </div>
     <section class="card admin-login" id="noAccess" hidden>
       <img src="assets/meongmung-sm.jpg" alt="" />
       <h2>관리자만 들어올 수 있어요</h2>
       <p class="muted small">claude.ai 에서 이 페이지를 편집할 수 있는 사람(주인, 편집자)만 일기와 사진을 지울 수 있어요.</p>
-      <a class="btn" href="#intro">← 처음으로</a>
+      <a class="btn" href="#intro">← 멍뭉일지로</a>
     </section>
     <section class="card admin-login" id="loginBox" hidden>
       <img src="assets/meongmung-sm.jpg" alt="" />
@@ -198,15 +216,21 @@
 
     <section id="adminBox" hidden>
       <div class="admin-tabs" id="adminTabs">
-        <button data-t="diary" class="active">📒 일기</button>
+        <button data-t="diary" class="active">📒 일기 · 도장</button>
         <button data-t="photos">📸 사진</button>
         <button data-t="profile">🐾 소개서 특징</button>
+        <button data-t="data">🗑️ 데이터 삭제</button>
         <button data-t="settings">⚙️ 설정</button>
       </div>
 
       <div class="card" data-panel="diary">
-        <h3>한 줄 일기 관리</h3>
-        <ul class="list" id="diaryRows"></ul>
+        <div class="head-row"><h3>한 줄 일기 확인</h3><span class="pill" id="newCount"></span></div>
+        <p class="muted small">멍뭉이가 쓴 일기를 읽고 <b>🐾 참 잘했어요</b>를 누르면 글 옆에 칭찬 도장이 찍혀요. 멍뭉이 화면에도 바로 보여요.</p>
+        <div class="seg" id="diaryFilter" role="group" aria-label="보기">
+          <button type="button" data-f="new" class="active">도장 기다리는 일기</button>
+          <button type="button" data-f="all">전체</button>
+        </div>
+        <ul class="list diary-admin" id="diaryRows"></ul>
       </div>
 
       <div class="card" data-panel="photos" hidden>
@@ -224,6 +248,23 @@
         <div class="chips" id="traitList"></div>
         <div style="margin-top:16px">
           <button class="btn primary block" id="traitSave">특징 목록 저장</button>
+        </div>
+      </div>
+
+      <div class="card" data-panel="data" hidden>
+        <h3>데이터 삭제</h3>
+        <p class="muted small">관리자만 할 수 있어요. 지운 데이터는 되돌릴 수 없으니, 필요하면 먼저 “설정 → 전체 데이터 백업”으로 받아 두세요.</p>
+        <ul class="list wipe-list">
+          <li><div class="body"><b>한 줄 일기</b><span class="meta">모든 일기와 출석 기록</span></div><div class="actions"><button class="btn danger sm" data-wipe="diary,stamps" type="button">삭제</button></div></li>
+          <li><div class="body"><b>참 잘했어요 도장</b><span class="meta">찍어 준 도장만 (일기는 그대로)</span></div><div class="actions"><button class="btn danger sm" data-wipe="stamps" type="button">삭제</button></div></li>
+          <li><div class="body"><b>사진</b><span class="meta">올린 사진 전부</span></div><div class="actions"><button class="btn danger sm" data-wipe="photos" type="button">삭제</button></div></li>
+          <li><div class="body"><b>멍뭉이 소개서</b><span class="meta">처음 상태로 되돌려요</span></div><div class="actions"><button class="btn danger sm" data-wipe="profile" type="button">초기화</button></div></li>
+        </ul>
+        <button class="btn danger block" data-wipe="diary,stamps,photos,profile" type="button" style="margin-top:14px">⚠️ 모든 데이터 한 번에 삭제</button>
+        <div class="pin-admin" id="pinAdmin">
+          <h3>입장 비밀번호</h3>
+          <p class="muted small" id="pinAdminText"></p>
+          <button class="btn block" id="pinReset" type="button" hidden>입장 비밀번호 초기화</button>
         </div>
       </div>
 
@@ -249,7 +290,18 @@
 
   <footer class="site-footer">
     <span id="modeNote"></span>
-    <a href="#admin">관리자</a>
+    <details class="legal">
+      <summary>개인정보 수집·이용 안내</summary>
+      <p><b>1. 수집 항목</b> 이용자가 직접 입력하거나 올린 한 줄 일기, 사진(사진에 담긴 촬영 정보 포함), 소개서 내용(이름·나이·매력·특징·한마디), 입장 비밀번호(암호화된 값). 이용 과정에서 이 기기를 기억하기 위한 정보가 브라우저 저장소에 저장됩니다.</p>
+      <p><b>2. 이용 목적</b> 일기·출석 달력, 사진 공유, 성장 기록 등 멍뭉일지 기능 제공과 본인 확인(입장 비밀번호)에만 이용하며, 광고나 마케팅에 이용하지 않습니다.</p>
+      <p><b>3. 보관 기간</b> 이용자가 삭제를 요청하거나 관리자가 삭제할 때까지, 또는 서비스를 종료할 때까지 보관하고, 그 뒤에는 지체 없이 파기합니다.</p>
+      <p><b>4. 제3자 제공 및 처리 위탁</b> 수집한 정보를 제3자에게 제공하지 않습니다. 다만 데이터 저장을 위해 이 페이지를 운영하는 플랫폼(claude.ai, Anthropic)의 서버를 이용합니다.</p>
+      <p><b>5. 이용자의 권리</b> 이용자는 언제든지 자신의 정보에 대한 열람·정정·삭제·처리정지를 관리자에게 요청할 수 있으며, 동의를 거부할 수 있습니다. 동의하지 않으면 일기·사진 등 해당 기능을 이용할 수 없습니다.</p>
+      <p><b>6. 안전성 확보</b> 입장 비밀번호는 원래 숫자를 알 수 없도록 암호화(해시)하여 저장하며, 공유 받은 사람만 이용할 수 있도록 접근을 제한합니다.</p>
+      <p><b>7. 개인정보 보호책임자</b> 멍뭉일지 관리자 (문의는 관리자에게 직접 연락해 주세요)</p>
+      <p class="muted">이 안내는 「개인정보 보호법」에 따른 수집·이용 고지이며, 시행일은 2026년 11월 6일입니다.</p>
+    </details>
+    <span class="copy">© 2026 멍뭉일지</span>
   </footer>
 
   <!-- 사진 크게 보기 -->

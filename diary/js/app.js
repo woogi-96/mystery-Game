@@ -1,5 +1,6 @@
 import { store, dateKey, escapeHtml, toast, downloadPhoto } from './store.js';
-import { meongmungImg, meongmungSmall, pawStampSVG } from './character.js';
+import { meongmungImg, meongmungSmall, pawStampSVG, praiseStampSVG } from './character.js';
+import { gate, isUnlocked } from './lock.js';
 import { GREETINGS, timePhase } from './greeting.js';
 import { computeGrowth, LEVELS, REWARDS, TIPS } from './growth.js';
 
@@ -10,6 +11,13 @@ const loaded = {};
 /* ---------- 라우팅 ---------- */
 function route() {
   const page = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'intro';
+  // 관리자 화면은 claude.ai 권한(또는 관리자 비밀번호)으로 따로 지켜요. 나머지는 입장 비밀번호 먼저
+  if (page !== 'admin' && !isUnlocked()) {
+    PAGES.forEach((p) => { $(`#page-${p}`).hidden = true; });
+    gate().then(route).catch(showError);
+    return;
+  }
+  document.body.classList.toggle('admin-mode', page === 'admin');
   PAGES.forEach((p) => { $(`#page-${p}`).hidden = p !== page; });
   document.querySelectorAll('.tabs a').forEach((a) => a.classList.toggle('active', a.dataset.tab === page));
   if (!loaded[page]) {
@@ -20,6 +28,10 @@ function route() {
     renderGrowth().catch(showError);
   }
   if (page === 'admin' && adminMod) adminMod.refresh();
+  if (page === 'today' && loaded.todayReady) {
+    Promise.all([store.getDiary(), store.getStamps().catch(() => ({}))])
+      .then(([d, st]) => { diary = d; stamps = st; fillTodayForm(); renderCalendar(); }).catch(showError);
+  }
   window.scrollTo({ top: 0 });
 }
 function showError(e) {
@@ -139,8 +151,9 @@ let diary = {};
 let calMonth = new Date(); calMonth.setDate(1);
 let selectedDay = null;
 
+let stamps = {};
 async function initToday() {
-  diary = await store.getDiary();
+  [diary, stamps] = await Promise.all([store.getDiary(), store.getStamps().catch(() => ({}))]);
   const d = new Date();
   $('#todayLabel').textContent = d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
   const input = $('#diaryInput');
@@ -175,10 +188,14 @@ async function initToday() {
   });
   selectedDay = today();
   renderCalendar();
+  loaded.todayReady = true;
 }
 
 function fillTodayForm() {
   const entry = diary[today()];
+  $('#todayPraise').innerHTML = stamps[today()]
+    ? `${praiseStampSVG('sm')}<span>오늘 일기에 <b>참 잘했어요</b> 도장을 받았어요!</span>` : '';
+  $('#todayPraise').hidden = !stamps[today()];
   $('#diaryInput').value = entry ? entry.text : '';
   $('#diaryBtn').textContent = entry ? '오늘 일기 고치기 ✏️' : '출석 도장 쾅!';
   $('#diaryCount').textContent = `${$('#diaryInput').value.length} / 80`;
@@ -206,8 +223,8 @@ function renderCalendar(stampedDate = null) {
     const w = (first + day - 1) % 7;
     const cls = ['cal-day', w === 0 ? 'sun' : '', w === 6 ? 'sat' : '', key === t ? 'today' : '',
       key === selectedDay ? 'selected' : '', key > t ? 'future' : ''].join(' ');
-    const stamp = diary[key] ? pawStampSVG(key === stampedDate ? 'new' : '') : '';
-    html += `<button class="${cls}" data-date="${key}" aria-label="${m + 1}월 ${day}일${diary[key] ? ' 출석' : ''}"><span class="num">${day}</span>${stamp}</button>`;
+    const stamp = diary[key] ? pawStampSVG(key === stampedDate ? 'new' : '') + (stamps[key] ? '<span class="cal-praise" aria-hidden="true">💮</span>' : '') : '';
+    html += `<button class="${cls}" data-date="${key}" aria-label="${m + 1}월 ${day}일${diary[key] ? ' 출석' : ''}${stamps[key] ? ', 참 잘했어요' : ''}"><span class="num">${day}</span>${stamp}</button>`;
   }
   $('#calDays').innerHTML = html;
   // 새로 찍힌 도장만 애니메이션
@@ -216,7 +233,7 @@ function renderCalendar(stampedDate = null) {
   const sel = selectedDay && diary[selectedDay];
   const label = selectedDay ? new Date(`${selectedDay}T00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }) : '';
   $('#calDetail').innerHTML = sel
-    ? `<span class="date">🐾 ${label}</span><p>${escapeHtml(sel.text)}</p>`
+    ? `<div class="detail-row"><div><span class="date">🐾 ${label}</span><p>${escapeHtml(sel.text)}</p></div>${stamps[selectedDay] ? praiseStampSVG('detail') : ''}</div>`
     : `<span class="date">${label}</span><p class="muted">${selectedDay === t ? '아직 오늘 일기가 없어요. 한 줄 남겨 볼까요?' : '이 날은 일기가 없어요.'}</p>`;
 
   const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}`;
@@ -319,8 +336,8 @@ async function initGrowth() {
 const fmtDate = (k) => new Date(`${k}T00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
 async function renderGrowth() {
-  const [d, p, pr] = await Promise.all([store.getDiary(), store.listPhotos(), store.getProfile()]);
-  const g = computeGrowth({ diary: d, photos: p, profile: pr });
+  const [d, p, pr, st] = await Promise.all([store.getDiary(), store.listPhotos(), store.getProfile(), store.getStamps().catch(() => ({}))]);
+  const g = computeGrowth({ diary: d, photos: p, profile: pr, stamps: st });
 
   $('#lvBadge').textContent = `Lv.${g.levelIndex + 1} ${g.level.icon} ${g.level.name}`;
   $('#lvNext').textContent = g.next ? `다음: ${g.next.icon} ${g.next.name}` : '최고 단계 달성! 👑';
@@ -373,7 +390,7 @@ async function renderGrowth() {
 
   $('#growStats').innerHTML = `
     <div class="stat"><b>${g.counts.meal}</b><span>🍚 밥</span></div>
-    <div class="stat"><b>${g.counts.snack + g.counts.feast + g.counts.photo}</b><span>🍪 간식</span></div>
+    <div class="stat"><b>${g.counts.snack + g.counts.feast + g.counts.photo + g.counts.praise}</b><span>🍪 간식</span></div>
     <div class="stat"><b>${g.streak}일</b><span>🔥 연속 출석</span></div>`;
 
   $('#growRoad').innerHTML = LEVELS.map((l, i) => `
@@ -385,7 +402,7 @@ async function renderGrowth() {
   $('#feedList').innerHTML = g.feed.length
     ? g.feed.slice(0, 12).map((f) => {
       const r = REWARDS[f.type];
-      const why = { meal: '출석', snack: `${f.run}일 연속 출석`, feast: `${f.run}일 연속 출석`, photo: '사진 올리기', profile: '소개서 완성' }[f.type];
+      const why = { meal: '출석', snack: `${f.run}일 연속 출석`, feast: `${f.run}일 연속 출석`, photo: '사진 올리기', profile: '소개서 완성', praise: '참 잘했어요 도장' }[f.type];
       return `<li><span class="fi">${r.icon}</span><span>${r.name} <span class="muted small">· ${why}</span></span><b>+${r.pts}</b><span class="fd">${fmtDate(f.date)}</span></li>`;
     }).join('')
     : '<li class="muted">아직 먹은 게 없어요. 오늘 첫 출석으로 밥을 주세요! 🥣</li>';

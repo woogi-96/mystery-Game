@@ -9,6 +9,18 @@ const ADMIN_KEY = 'mm-admin-key';
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const extOf = (type) => ({ 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp' }[type] || '.jpg');
 
+async function sha256(text) {
+  if (crypto?.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  let h = 0; // crypto.subtle 이 없는 아주 오래된 브라우저용
+  for (const c of text) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return `x${(h >>> 0).toString(16)}`;
+}
+const randomSalt = () => [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, '0')).join('');
+const WIPE_KINDS = ['diary', 'photos', 'stamps', 'profile'];
+
 function fail(msg, status) {
   const e = new Error(msg);
   e.status = status;
@@ -53,6 +65,9 @@ async function cloudBackend() {
     return s.exists ? { ...structuredClone(fallback), ...s.data() } : structuredClone(fallback);
   };
   const isEditor = async () => (user ? !!(await user.canEdit()) : false);
+  const uid = user ? await user.id().catch(() => null) : null;
+  const lockRef = uid ? db.doc(`data/users/${uid}/lock`) : null;
+  const allDocs = async (coll) => (await wrap(() => db.collection(coll).get())).docs;
   const needEditor = async () => { if (!(await isEditor())) throw fail('편집 권한이 있는 사람만 할 수 있어요', 401); };
 
   // 업로드 가능한 형식(png/jpeg/gif/webp, 20MB)이 아니면 JPEG로 바꿔요 (아이폰 HEIC 등)
@@ -140,6 +155,52 @@ async function cloudBackend() {
       try { await downloads.save({ filename, data }); } catch (e) { if (e?.code !== 'declined') throw fail('저장하지 못했어요'); }
     },
 
+    // 참 잘했어요 도장 (관리자만 찍어요)
+    getStamps: async () => Object.fromEntries((await allDocs('stamps')).map((d) => [d.id, d.data()])),
+    setStamp: async (date, on) => {
+      await needEditor();
+      const ref = db.collection('stamps').doc(date);
+      await wrap(() => (on ? ref.set({ at: new Date().toISOString() }) : ref.delete()));
+    },
+
+    // 입장 비밀번호: 사람마다 자기만 볼 수 있는 곳에 해시로 저장
+    lockState: async (token) => {
+      if (!lockRef) return { set: false, unsupported: true };
+      const snap = await lockRef.get().catch(() => null);
+      if (!snap) return { set: false, unsupported: true };
+      if (!snap.exists) return { set: false };
+      return { set: true, remembered: !!token && token === snap.data().hash };
+    },
+    setPin: async (pin) => {
+      const salt = randomSalt();
+      const hash = await sha256(`${salt}:${pin}`);
+      await wrap(() => lockRef.set({ salt, hash, at: new Date().toISOString() }));
+      return hash;
+    },
+    unlock: async (pin) => {
+      const snap = await wrap(() => lockRef.get());
+      if (!snap.exists) return null;
+      const { salt, hash } = snap.data();
+      return (await sha256(`${salt}:${pin}`)) === hash ? hash : null;
+    },
+    canResetOwnPin: true, // claude.ai 로그인으로 본인 확인이 되니까 잠금 화면에서 다시 설정할 수 있어요
+    resetPin: async () => { await wrap(() => lockRef.delete()); },
+
+    wipe: async (kinds = WIPE_KINDS) => {
+      await needEditor();
+      if (kinds.includes('photos')) {
+        const assets = await assetsP;
+        for (const d of await allDocs('photos')) {
+          if (assets) await assets.delete(d.data().assetId).catch(() => {});
+          await wrap(() => db.collection('photos').doc(d.id).delete());
+        }
+      }
+      for (const coll of ['diary', 'stamps'].filter((k) => kinds.includes(k))) {
+        for (const d of await allDocs(coll)) await wrap(() => db.collection(coll).doc(d.id).delete());
+      }
+      if (kinds.includes('profile')) await wrap(() => db.doc('app/profile').delete());
+    },
+
     // 관리자 = claude.ai 에서 이 페이지를 편집할 수 있는 사람 (주인 / 편집자)
     usesPassword: false,
     isAdmin: isEditor,
@@ -148,12 +209,13 @@ async function cloudBackend() {
     changePassword: async () => { throw fail('claude.ai 에서는 비밀번호 대신 공유 권한으로 관리해요'); },
     exportAll: async () => {
       await needEditor();
+      const stamps = Object.fromEntries((await allDocs('stamps')).map((d) => [d.id, d.data()]));
       const [profile, settings, diary, photos] = await Promise.all([
         docData('app/profile', DEFAULT_PROFILE), docData('app/settings', { traitOptions: DEFAULT_TRAITS }),
         (async () => Object.fromEntries((await db.collection('diary').get()).docs.map((d) => [d.id, d.data()])))(),
         (async () => (await db.collection('photos').get()).docs.map((d) => ({ id: d.id, ...d.data() })))(),
       ]);
-      return { profile, traitOptions: settings.traitOptions, diary, photos };
+      return { profile, traitOptions: settings.traitOptions, diary, stamps, photos };
     },
   };
 }
@@ -199,6 +261,19 @@ async function serverBackend() {
     deletePhoto: (id) => api(`photos/${id}`, { method: 'DELETE', admin: true }),
     downloadPhoto: null, // 일반 다운로드 링크 사용
     saveFile: null,
+    getStamps: () => api('stamps'),
+    setStamp: (date, on) => api(`stamps/${date}`, { method: on ? 'PUT' : 'DELETE', admin: true }),
+    lockState: (token) => api(`lock?token=${encodeURIComponent(token || '')}`),
+    setPin: async (pin) => (await api('lock', { method: 'POST', body: { pin } })).token,
+    unlock: async (pin) => {
+      try { return (await api('lock/unlock', { method: 'POST', body: { pin } })).token; } catch (e) {
+        if (e.status === 401) return null;
+        throw e;
+      }
+    },
+    canResetOwnPin: false,
+    resetPin: () => api('lock', { method: 'DELETE', admin: true }),
+    wipe: (kinds = WIPE_KINDS) => api('admin/wipe', { method: 'POST', body: { kinds }, admin: true }),
     usesPassword: true,
     isAdmin: async () => !!adminKey(),
     login: async (pw) => {
@@ -291,6 +366,40 @@ function localBackend() {
     },
     downloadPhoto: null,
     saveFile: null,
+    getStamps: () => kvGet('stamps', {}),
+    setStamp: async (date, on) => {
+      await check();
+      const st = await kvGet('stamps', {});
+      if (on) st[date] = { at: new Date().toISOString() }; else delete st[date];
+      await kvSet('stamps', st);
+    },
+    lockState: async (token) => {
+      const l = await kvGet('lock', null);
+      return l ? { set: true, remembered: !!token && token === l.hash } : { set: false };
+    },
+    setPin: async (pin) => {
+      const salt = randomSalt();
+      const hash = await sha256(`${salt}:${pin}`);
+      await kvSet('lock', { salt, hash });
+      return hash;
+    },
+    unlock: async (pin) => {
+      const l = await kvGet('lock', null);
+      return l && (await sha256(`${l.salt}:${pin}`)) === l.hash ? l.hash : null;
+    },
+    canResetOwnPin: false,
+    resetPin: async () => { await check(); await run('kv', 'readwrite', (s) => s.delete('lock')); },
+    wipe: async (kinds = WIPE_KINDS) => {
+      await check();
+      if (kinds.includes('diary')) await kvSet('diary', {});
+      if (kinds.includes('stamps')) await kvSet('stamps', {});
+      if (kinds.includes('profile')) await run('kv', 'readwrite', (s) => s.delete('profile'));
+      if (kinds.includes('photos')) {
+        await run('photos', 'readwrite', (s) => s.clear());
+        urlCache.forEach((u) => URL.revokeObjectURL(u));
+        urlCache.clear();
+      }
+    },
     usesPassword: true,
     isAdmin: async () => !!adminKey(),
     login: async (pw) => {
@@ -305,6 +414,7 @@ function localBackend() {
         profile: await kvGet('profile', DEFAULT_PROFILE),
         traitOptions: await kvGet('traitOptions', DEFAULT_TRAITS),
         diary: await kvGet('diary', {}),
+        stamps: await kvGet('stamps', {}),
         photos: (await run('photos', 'readonly', (s) => s.getAll())).map(({ blob, ...m }) => m),
       };
     },
@@ -356,10 +466,11 @@ export function askConfirm(message, okLabel = '삭제') {
     const yes = dlg.querySelector('#confirmYes');
     const no = dlg.querySelector('#confirmNo');
     yes.textContent = okLabel;
-    const done = (v) => { yes.onclick = no.onclick = null; dlg.onclose = null; if (dlg.open) dlg.close(); resolve(v); };
+    // close 이벤트는 늦게 도착해서 다음 확인 창을 닫아 버릴 수 있어요 → Esc(cancel)만 따로 받아요
+    const done = (v) => { yes.onclick = no.onclick = dlg.oncancel = null; if (dlg.open) dlg.close(); resolve(v); };
     yes.onclick = () => done(true);
     no.onclick = () => done(false);
-    dlg.onclose = () => done(false);
+    dlg.oncancel = (e) => { e.preventDefault(); done(false); };
     dlg.showModal();
   });
 }

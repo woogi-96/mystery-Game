@@ -24,3 +24,22 @@ export function pawStampSVG(cls = '') {
     <path d="M22 44 C21 36 28 34 32 37 C36 34 43 36 42 44 C41 52 23 52 22 44 Z" fill="#f3dc86"/>
   </svg>`;
 }
+
+/** “참 잘했어요” 발바닥 칭찬 도장 */
+export function praiseStampSVG(cls = '') {
+  const scallop = Array.from({ length: 18 }, (_, i) => {
+    const a = (i / 18) * Math.PI * 2;
+    return `<circle cx="${(50 + Math.cos(a) * 43).toFixed(1)}" cy="${(50 + Math.sin(a) * 43).toFixed(1)}" r="6.5"/>`;
+  }).join('');
+  return `<svg class="praise-stamp ${cls}" viewBox="0 0 100 100" role="img" aria-label="참 잘했어요 도장">
+    <g fill="#ff6f8e" opacity=".9">${scallop}<circle cx="50" cy="50" r="43"/></g>
+    <circle cx="50" cy="50" r="36" fill="#fff6f8"/>
+    <circle cx="50" cy="50" r="33" fill="none" stroke="#ff6f8e" stroke-width="2.2" stroke-dasharray="3 3"/>
+    <g fill="#ff6f8e">
+      <ellipse cx="50" cy="44" rx="10" ry="8"/>
+      <ellipse cx="38" cy="34" rx="4" ry="5"/><ellipse cx="45.5" cy="28" rx="4" ry="5.2"/>
+      <ellipse cx="54.5" cy="28" rx="4" ry="5.2"/><ellipse cx="62" cy="34" rx="4" ry="5"/>
+    </g>
+    <text x="50" y="70" text-anchor="middle" font-family="Jua, sans-serif" font-size="13" fill="#e2456b">참 잘했어요</text>
+  </svg>`;
+}

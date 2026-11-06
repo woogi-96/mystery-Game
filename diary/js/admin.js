@@ -1,5 +1,6 @@
 // 관리자 화면 (index.html#admin)
 import { store, escapeHtml, toast, askConfirm, downloadPhoto } from './store.js';
+import { praiseStampSVG } from './character.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const fail = (e) => {
@@ -23,6 +24,10 @@ function loadAll() {
   loadDiary().catch(fail);
   loadPhotos().catch(fail);
   loadTraits().catch(fail);
+  $('#pinReset').hidden = store.canResetOwnPin;
+  $('#pinAdminText').textContent = store.canResetOwnPin
+    ? '입장 비밀번호는 사람마다 따로 정하고, 각자만 볼 수 있게 암호화해서 저장해요. 잊어버리면 잠금 화면의 “비밀번호를 잊었어요”로 새로 정할 수 있어요.'
+    : '모두가 같은 입장 비밀번호 4자리를 써요. 잊어버렸다면 여기서 초기화한 뒤 새로 정하면 돼요.';
   $('#adminMode').textContent = {
     cloud: '지금은 claude.ai 공용 저장소를 써요. 이 페이지를 공유받은 사람끼리 같은 일기와 사진을 봐요. 관리는 이 페이지를 편집할 수 있는 사람(주인, 편집자)만 할 수 있어요.',
     server: '지금은 서버 저장 방식이에요. 모든 데이터가 서버의 diary/data 폴더에 저장돼요.',
@@ -30,14 +35,35 @@ function loadAll() {
   }[store.mode];
 }
 
-/* ---------- 일기 ---------- */
+/* ---------- 일기 · 참 잘했어요 도장 ---------- */
+let diary = {};
+let stamps = {};
+let filter = 'new';
+const fmt = (k) => new Date(`${k}T00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+
 async function loadDiary() {
-  const diary = await store.getDiary();
-  const rows = Object.entries(diary).sort((a, b) => b[0].localeCompare(a[0]));
+  [diary, stamps] = await Promise.all([store.getDiary(), store.getStamps()]);
+  renderDiary();
+}
+function renderDiary() {
+  const all = Object.entries(diary).sort((a, b) => b[0].localeCompare(a[0]));
+  const waiting = all.filter(([d]) => !stamps[d]);
+  $('#newCount').textContent = waiting.length ? `도장 기다리는 일기 ${waiting.length}개` : '모두 확인했어요 ✓';
+  $('#newCount').classList.toggle('done', !waiting.length);
+  document.querySelectorAll('#diaryFilter button').forEach((b) => b.classList.toggle('active', b.dataset.f === filter));
+  const rows = filter === 'new' ? waiting : all;
   $('#diaryRows').innerHTML = rows.length
-    ? rows.map(([d, e]) => `<li><div class="body"><span class="meta">${d}</span>${escapeHtml(e.text)}</div>
-        <div class="actions"><button class="btn danger sm" data-del="${d}">삭제</button></div></li>`).join('')
-    : '<li class="muted">아직 일기가 없어요.</li>';
+    ? rows.map(([d, e]) => {
+      const on = !!stamps[d];
+      return `<li class="${on ? 'stamped' : ''}">
+        <div class="body"><span class="meta">${fmt(d)}</span><p class="entry">${escapeHtml(e.text)}</p>
+          <div class="row-actions">
+            <button class="btn sm ${on ? '' : 'praise'}" data-stamp="${d}" data-on="${on ? 1 : 0}" type="button">${on ? '도장 빼기' : '🐾 참 잘했어요'}</button>
+            <button class="btn danger sm" data-del="${d}" type="button">삭제</button>
+          </div></div>
+        <div class="stamp-slot">${on ? praiseStampSVG('admin') : '<span class="stamp-empty">도장<br>자리</span>'}</div></li>`;
+    }).join('')
+    : `<li class="muted">${filter === 'new' && all.length ? '도장을 기다리는 일기가 없어요. 모두 확인했어요! 💮' : '아직 일기가 없어요.'}</li>`;
 }
 
 /* ---------- 사진 ---------- */
@@ -87,10 +113,57 @@ export function init() {
     document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== b.dataset.t; });
   });
 
+  $('#diaryFilter').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) { filter = b.dataset.f; renderDiary(); }
+  });
   $('#diaryRows').addEventListener('click', async (e) => {
-    const d = e.target.dataset.del;
-    if (!d || !(await askConfirm(`${d} 일기를 삭제할까요?`))) return;
-    try { await store.deleteDiary(d); toast('삭제했어요'); loadDiary(); } catch (err) { fail(err); }
+    const sb = e.target.closest('[data-stamp]');
+    if (sb) {
+      const d = sb.dataset.stamp;
+      const on = sb.dataset.on !== '1';
+      sb.disabled = true;
+      try {
+        await store.setStamp(d, on);
+        if (on) { stamps[d] = { at: new Date().toISOString() }; toast('참 잘했어요 도장을 쾅! 💮'); } else { delete stamps[d]; toast('도장을 뺐어요'); }
+        if (on && filter === 'new') {
+          const li = sb.closest('li');
+          li.querySelector('.stamp-slot').innerHTML = praiseStampSVG('admin new');
+          li.classList.add('stamped');
+          setTimeout(renderDiary, 900);
+        } else renderDiary();
+      } catch (err) { sb.disabled = false; fail(err); }
+      return;
+    }
+    const d = e.target.closest('[data-del]')?.dataset.del;
+    if (!d || !(await askConfirm(`${fmt(d)} 일기를 삭제할까요?`))) return;
+    try {
+      await store.deleteDiary(d);
+      if (stamps[d]) await store.setStamp(d, false).catch(() => {});
+      toast('삭제했어요');
+      loadDiary();
+    } catch (err) { fail(err); }
+  });
+
+  // 데이터 삭제 (관리자만)
+  const WIPE_LABEL = { diary: '한 줄 일기', stamps: '참 잘했어요 도장', photos: '사진', profile: '멍뭉이 소개서' };
+  $('[data-panel="data"]').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-wipe]');
+    if (!b) return;
+    const kinds = b.dataset.wipe.split(',');
+    const what = kinds.length >= 4 ? '모든 데이터(일기, 도장, 사진, 소개서)' : kinds.filter((k) => !(k === 'stamps' && kinds.includes('diary'))).map((k) => WIPE_LABEL[k]).join(', ');
+    if (!(await askConfirm(`${what}를 모두 삭제할까요? 되돌릴 수 없어요.`, '삭제하기'))) return;
+    if (kinds.length >= 4 && !(await askConfirm('정말 전부 지울까요? 마지막으로 한 번 더 확인해요.', '전부 삭제'))) return;
+    b.disabled = true;
+    try {
+      await store.wipe(kinds);
+      toast(`${what}를 삭제했어요`);
+      loadAll();
+    } catch (err) { fail(err); } finally { b.disabled = false; }
+  });
+  $('#pinReset').addEventListener('click', async () => {
+    if (!(await askConfirm('입장 비밀번호를 지울까요? 다음에 들어오는 사람이 새 비밀번호 4자리를 정하게 돼요.', '초기화'))) return;
+    try { await store.resetPin(); toast('입장 비밀번호를 초기화했어요'); } catch (err) { fail(err); }
   });
 
   $('#photoGrid').addEventListener('click', async (e) => {

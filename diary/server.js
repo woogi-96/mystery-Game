@@ -30,6 +30,8 @@ db.profile ??= structuredClone(DEFAULT_PROFILE);
 db.traitOptions ??= [...DEFAULT_TRAITS];
 db.diary ??= {};
 db.photos ??= [];
+db.stamps ??= {};
+db.lock ??= null; // { salt, hash } 입장 비밀번호
 db.adminPassword ??= process.env.ADMIN_PASSWORD || 'meongmung';
 if (process.env.ADMIN_PASSWORD && process.env.RESET_PASSWORD === '1') db.adminPassword = process.env.ADMIN_PASSWORD;
 
@@ -93,6 +95,12 @@ function checkDate(d) {
   if (!DATE_RE.test(d)) throw new HttpError(400, '날짜 형식이 올바르지 않아요');
   return d;
 }
+const hashPin = (salt, pin) => crypto.createHash('sha256').update(`${salt}:${pin}`).digest('hex');
+const PIN_RE = /^\d{4}$/;
+// 비밀번호 4자리를 마구 눌러 맞히지 못하게: 5번 틀리면 1분 잠금
+let pinFails = 0;
+let pinLockedUntil = 0;
+
 const newId = () => Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
 
 /* ---------- API ---------- */
@@ -192,9 +200,64 @@ async function handleApi(req, res, parts) {
     }
   }
 
+  if (resource === 'stamps') {
+    if (m === 'GET' && !id) return send(res, 200, db.stamps);
+    requireAdmin(req);
+    checkDate(id);
+    if (m === 'PUT') db.stamps[id] = { at: new Date().toISOString() };
+    else if (m === 'DELETE') delete db.stamps[id];
+    else throw new HttpError(405, '허용되지 않는 요청이에요');
+    await save();
+    return send(res, 200, { ok: true });
+  }
+
+  if (resource === 'lock') {
+    if (m === 'GET' && !id) {
+      const token = new URL(req.url, 'http://x').searchParams.get('token') || '';
+      return send(res, 200, db.lock ? { set: true, remembered: !!token && token === db.lock.hash } : { set: false });
+    }
+    if (m === 'POST' && !id) {
+      if (db.lock) throw new HttpError(409, '이미 비밀번호가 있어요');
+      const { pin } = await readJson(req);
+      if (!PIN_RE.test(String(pin))) throw new HttpError(400, '숫자 4자리로 정해 주세요');
+      const salt = crypto.randomBytes(12).toString('hex');
+      db.lock = { salt, hash: hashPin(salt, pin) };
+      await save();
+      return send(res, 200, { token: db.lock.hash });
+    }
+    if (m === 'POST' && id === 'unlock') {
+      if (Date.now() < pinLockedUntil) throw new HttpError(429, '여러 번 틀려서 1분 동안 잠겼어요');
+      const { pin } = await readJson(req);
+      if (db.lock && PIN_RE.test(String(pin)) && hashPin(db.lock.salt, pin) === db.lock.hash) {
+        pinFails = 0;
+        return send(res, 200, { token: db.lock.hash });
+      }
+      if (++pinFails >= 5) { pinFails = 0; pinLockedUntil = Date.now() + 60000; }
+      throw new HttpError(401, '비밀번호가 달라요');
+    }
+    if (m === 'DELETE' && !id) {
+      requireAdmin(req);
+      db.lock = null;
+      await save();
+      return send(res, 200, { ok: true });
+    }
+  }
+
   if (resource === 'admin') {
     requireAdmin(req);
     if (id === 'check' && m === 'POST') return send(res, 200, { ok: true });
+    if (id === 'wipe' && m === 'POST') {
+      const { kinds = [] } = await readJson(req);
+      if (kinds.includes('diary')) db.diary = {};
+      if (kinds.includes('stamps')) db.stamps = {};
+      if (kinds.includes('profile')) db.profile = structuredClone(DEFAULT_PROFILE);
+      if (kinds.includes('photos')) {
+        for (const p of db.photos) await fsp.rm(path.join(UPLOADS, p.file), { force: true });
+        db.photos = [];
+      }
+      await save();
+      return send(res, 200, { ok: true });
+    }
     if (id === 'password' && m === 'PUT') {
       const { password } = await readJson(req);
       const p = String(password || '');
@@ -207,7 +270,7 @@ async function handleApi(req, res, parts) {
 
   if (resource === 'export' && m === 'GET') {
     requireAdmin(req);
-    const { adminPassword, ...rest } = db;
+    const { adminPassword, lock, ...rest } = db;
     return send(res, 200, rest);
   }
 
