@@ -38,7 +38,6 @@ $('#adminTabs').addEventListener('click', (e) => {
 function loadAll() {
   loadDiary().catch(fail);
   loadPhotos().catch(fail);
-  loadQuizzes().catch(fail);
   loadTraits().catch(fail);
   $('#adminMode').textContent = store.local
     ? '현재 “브라우저 저장” 모드예요. 데이터는 이 브라우저에만 있어요. (기본 비밀번호: meongmung)'
@@ -74,68 +73,6 @@ $('#photoGrid').addEventListener('click', async (e) => {
   const id = e.target.dataset.del;
   if (!id || !confirm('이 사진을 삭제할까요? 되돌릴 수 없어요.')) return;
   try { await store.deletePhoto(id); toast('사진을 삭제했어요'); loadPhotos(); } catch (err) { fail(err); }
-});
-
-/* ---------- 퀴즈 ---------- */
-let quizzes = [];
-async function loadQuizzes() {
-  quizzes = await store.getQuizzes();
-  $('#quizCount').textContent = `(${quizzes.length}개)`;
-  $('#quizRows').innerHTML = quizzes.map((q) => `<li>
-      <div class="body"><b>${escapeHtml(q.word)}</b> · ${escapeHtml(q.options[q.answer])}
-        <span class="meta">${escapeHtml(q.reason)}</span></div>
-      <div class="actions"><button class="btn sm" data-edit="${q.id}">수정</button>
-      <button class="btn danger sm" data-del="${q.id}">삭제</button></div></li>`).join('');
-}
-const qf = $('#quizForm');
-function resetQuizForm() {
-  qf.reset();
-  qf.elements.id.value = '';
-  $('#quizFormTitle').textContent = '새 퀴즈 추가';
-  $('#quizSubmit').textContent = '추가';
-  $('#quizCancel').hidden = true;
-}
-$('#quizCancel').addEventListener('click', resetQuizForm);
-$('#quizRows').addEventListener('click', async (e) => {
-  const { edit, del } = e.target.dataset;
-  if (edit) {
-    const q = quizzes.find((x) => x.id === edit);
-    qf.elements.id.value = q.id;
-    qf.elements.word.value = q.word;
-    qf.elements.question.value = q.question || '';
-    q.options.forEach((o, i) => { qf.elements[`o${i}`].value = o; });
-    qf.querySelector(`input[name=answer][value="${q.answer}"]`).checked = true;
-    qf.elements.reason.value = q.reason;
-    $('#quizFormTitle').textContent = `“${q.word}” 수정`;
-    $('#quizSubmit').textContent = '수정 저장';
-    $('#quizCancel').hidden = false;
-    qf.scrollIntoView({ behavior: 'smooth' });
-  }
-  if (del && confirm('이 퀴즈를 삭제할까요?')) {
-    try { await store.deleteQuiz(del); toast('퀴즈를 삭제했어요'); loadQuizzes(); } catch (err) { fail(err); }
-  }
-});
-qf.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const el = qf.elements;
-  const q = {
-    word: el.word.value.trim(),
-    question: el.question.value.trim(),
-    options: [0, 1, 2, 3].map((i) => el[`o${i}`].value.trim()),
-    answer: +qf.querySelector('input[name=answer]:checked').value,
-    reason: el.reason.value.trim(),
-  };
-  if (el.id.value) q.id = el.id.value;
-  try {
-    await store.saveQuiz(q);
-    toast(q.id ? '퀴즈를 수정했어요' : '퀴즈를 추가했어요 💡');
-    resetQuizForm();
-    loadQuizzes();
-  } catch (err) { fail(err); }
-});
-$('#resetLog').addEventListener('click', async () => {
-  if (!confirm('지금까지 푼 퀴즈 기록을 모두 지울까요? (오늘 퀴즈도 다시 풀 수 있어요)')) return;
-  try { await store.resetQuizLog(); toast('퀴즈 기록을 초기화했어요'); } catch (err) { fail(err); }
 });
 
 /* ---------- 특징 ---------- */

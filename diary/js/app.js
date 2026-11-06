@@ -1,8 +1,10 @@
 import { store, dateKey, escapeHtml, toast } from './store.js';
 import { meongmungImg, meongmungSmall, pawStampSVG } from './character.js';
+import { GREETINGS, timePhase } from './greeting.js';
+import { computeGrowth, LEVELS, REWARDS, TIPS } from './growth.js';
 
 const $ = (s, el = document) => el.querySelector(s);
-const PAGES = ['intro', 'today', 'together', 'quiz'];
+const PAGES = ['intro', 'today', 'together', 'growth'];
 const loaded = {};
 
 /* ---------- 라우팅 ---------- */
@@ -12,7 +14,10 @@ function route() {
   document.querySelectorAll('.tabs a').forEach((a) => a.classList.toggle('active', a.dataset.tab === page));
   if (!loaded[page]) {
     loaded[page] = true;
-    ({ intro: initIntro, today: initToday, together: initTogether, quiz: initQuiz })[page]().catch(showError);
+    ({ intro: initIntro, today: initToday, together: initTogether, growth: initGrowth })[page]().catch(showError);
+  }
+  if (page === 'growth' && loaded.growthReady) {
+    renderGrowth().catch(showError);
   }
   window.scrollTo({ top: 0 });
 }
@@ -32,8 +37,60 @@ $('#modeNote').textContent = store.local
   : '☁️ 멍뭉이와 함께 보는 공용 일지예요';
 
 /* ---------- 1. 소개 ---------- */
+/* 시간대 인사 (1분마다 확인해서 아침 → 점심 → 저녁이 바뀌면 갱신) */
+let phase = timePhase();
+function renderGreeting() {
+  const g = GREETINGS[phase];
+  const now = new Date();
+  $('#timeLabel').textContent = `${g.icon} 지금 ${now.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })} · ${g.label}`;
+  $('#greetLine').textContent = g.line;
+  $('#greetSub').textContent = g.sub;
+  $('#greetBubble').textContent = `${g.line} ${g.icon}`;
+}
+setInterval(() => {
+  const p = timePhase();
+  if (p !== phase) { phase = p; mountScene(); }
+  renderGreeting();
+}, 60000);
+
+let scene = null;
+async function mountScene() {
+  const stage = $('#stage3d');
+  const bubble = $('#greetBubble');
+  scene?.destroy();
+  bubble.hidden = true;
+  stage.classList.remove('flat');
+  stage.querySelector('.mm-char')?.remove();
+  try {
+    const { startGreetingScene } = await import('./scene3d.js');
+    scene = startGreetingScene(stage, {
+      phase,
+      onReady: () => { bubble.hidden = false; $('#replayBtn').hidden = false; },
+    });
+  } catch (e) { console.warn(e); scene = null; }
+  if (!scene) {
+    // 3D가 안 되는 기기에서는 일러스트로 대신 인사해요
+    stage.classList.add('flat');
+    stage.insertAdjacentHTML('afterbegin', meongmungImg());
+    bubble.hidden = false;
+    return;
+  }
+  scene.onFrame = ({ x, y }) => {
+    bubble.style.left = `${Math.min(Math.max(x, 28), 72)}%`;
+    bubble.style.top = `${Math.max(y, 4)}%`;
+  };
+  scene.onTap = () => {
+    const tapLines = ['헤헤 🐾', '멍뭉! 💗', '간지러워요 >_<', GREETINGS[phase].line];
+    bubble.textContent = tapLines[Math.floor(Math.random() * tapLines.length)];
+    clearTimeout(scene.tapTimer);
+    scene.tapTimer = setTimeout(renderGreeting, 1800);
+  };
+}
+
 async function initIntro() {
-  $('#heroArt').innerHTML = `${meongmungImg()}<span class="bubble">안녕! 나 멍뭉이야 🐾</span>`;
+  renderGreeting();
+  mountScene();
+  $('#replayBtn').addEventListener('click', () => { $('#greetBubble').hidden = true; scene?.replay(); });
   const [profile, settings] = await Promise.all([store.getProfile(), store.getSettings()]);
   const form = $('#profileForm');
   ['name', 'age', 'charm', 'oneLiner'].forEach((k) => { form.elements[k].value = profile[k] || ''; });
@@ -246,123 +303,86 @@ async function renderGallery() {
   };
 }
 
-/* ---------- 4. 멍뭉 퀴즈 ---------- */
-function seededOrder(ids) {
-  // 날짜마다 다른 문제가 나오도록 고정된 순서로 섞기
-  const arr = [...ids].sort();
-  let s = 20260101;
-  const rnd = () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648);
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-function dayNumber(key) {
-  const [y, m, d] = key.split('-').map(Number);
-  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+/* ---------- 4. 멍뭉 성장 ---------- */
+async function initGrowth() {
+  $('#tipList').innerHTML = TIPS.map((t) => `<li><span class="tip-ic">${t.icon}</span><div><b>${t.title}</b><p>${t.text}</p></div></li>`).join('');
+  loaded.growthReady = true;
+  await renderGrowth();
 }
 
-let quizzes = [];
-let quizLog = {};
+const fmtDate = (k) => new Date(`${k}T00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
-async function initQuiz() {
-  [quizzes, quizLog] = await Promise.all([store.getQuizzes(), store.getQuizLog()]);
-  renderQuiz();
-}
+async function renderGrowth() {
+  const [d, p, pr] = await Promise.all([store.getDiary(), store.listPhotos(), store.getProfile()]);
+  const g = computeGrowth({ diary: d, photos: p, profile: pr });
 
-function todaysQuiz() {
-  const t = today();
-  const done = quizLog[t] && quizzes.find((q) => q.id === quizLog[t].quizId);
-  if (done) return done;
-  if (!quizzes.length) return null;
-  const order = seededOrder(quizzes.map((q) => q.id));
-  const id = order[dayNumber(t) % order.length];
-  return quizzes.find((q) => q.id === id);
-}
+  $('#lvBadge').textContent = `Lv.${g.levelIndex + 1} ${g.level.icon} ${g.level.name}`;
+  $('#lvNext').textContent = g.next ? `다음: ${g.next.icon} ${g.next.name}` : '최고 단계 달성! 👑';
+  $('#meterFrom').textContent = `${g.points}점`;
+  $('#meterTo').textContent = g.next ? `${g.next.at}점` : 'MAX';
+  $('#meterPct').textContent = g.next ? `${g.toNext}점 남았어요 · 출석 ${Math.ceil(g.toNext / REWARDS.meal.pts)}번이면 돼요!` : '전설의 멍뭉이 되었어요!';
 
-function renderQuiz() {
-  const card = $('#quizCard');
-  const q = todaysQuiz();
-  if (!q) {
-    card.innerHTML = '<p class="muted">아직 등록된 퀴즈가 없어요. 관리자 페이지에서 추가해 주세요!</p>';
-    return;
-  }
-  const rec = quizLog[today()];
-  card.innerHTML = `
-    <span class="q-label">오늘의 신조어 · ${new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}</span>
-    <p class="word">“${escapeHtml(q.word)}”</p>
-    <p class="question">${escapeHtml(q.question || '이 말의 뜻은 무엇일까요?')}</p>
-    <div class="options">${q.options.map((o, i) => `
-      <button class="opt" data-i="${i}"><span class="n">${i + 1}</span><span>${escapeHtml(o)}</span></button>`).join('')}
-    </div>
-    <div id="quizResult"></div>`;
-
-  if (rec) showAnswer(q, rec.choice, false);
-  else {
-    card.querySelector('.options').addEventListener('click', async (e) => {
-      const b = e.target.closest('.opt');
-      if (!b || b.disabled) return;
-      const choice = +b.dataset.i;
-      const correct = choice === q.answer;
-      card.querySelectorAll('.opt').forEach((o) => { o.disabled = true; });
-      try {
-        quizLog[today()] = await store.saveQuizAnswer(today(), { quizId: q.id, word: q.word, choice, correct });
-      } catch (err) { showError(err); }
-      showAnswer(q, choice, true);
-    }, { once: false });
-  }
-  renderQuizStats();
-}
-
-function showAnswer(q, choice, fresh) {
-  const card = $('#quizCard');
-  const correct = choice === q.answer;
-  card.querySelectorAll('.opt').forEach((o, i) => {
-    o.disabled = true;
-    if (i === q.answer) o.classList.add('correct');
-    else if (i === choice) o.classList.add('wrong');
+  // 게이지와 밥그릇이 0에서부터 차오르며 이동
+  const fill = $('#meterFill');
+  const runner = $('#meterRunner');
+  const char = $('#growChar');
+  const pct = Math.round(g.progress * 100);
+  fill.style.transition = runner.style.transition = 'none';
+  fill.style.width = '0%';
+  runner.style.left = '0%';
+  char.style.setProperty('--s', LEVELS[Math.max(0, g.levelIndex - 1)].scale);
+  void fill.offsetWidth;
+  fill.style.transition = 'width 1.6s cubic-bezier(.3,.9,.3,1)';
+  runner.style.transition = 'left 1.6s cubic-bezier(.3,.9,.3,1)';
+  requestAnimationFrame(() => {
+    fill.style.width = `${pct}%`;
+    runner.style.left = `${pct}%`;
+    char.style.setProperty('--s', g.level.scale);
   });
-  const res = $('#quizResult');
-  if (correct) {
-    res.innerHTML = `<div class="result ok">${meongmungSmall()}<div>
-      <h4>정답이에요! 🎉</h4>
-      <p>${escapeHtml(q.reason || '')}</p>
-      <p class="muted small">내일 새로운 퀴즈로 또 만나요!</p></div></div>`;
-    if (fresh) showCircle();
-  } else {
-    res.innerHTML = `<div class="result no">${meongmungSmall()}<div>
-      <h4>아쉬워요, 틀렸어요 😢</h4>
-      <p class="ans">정답: ${q.answer + 1}번 “${escapeHtml(q.options[q.answer])}”</p>
-      <p><b>이유</b> · ${escapeHtml(q.reason || '')}</p>
-      <p class="muted small">내일은 꼭 맞혀 봐요!</p></div></div>`;
-    if (fresh) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+  runner.textContent = g.fedToday ? '🍚' : '🥣';
+  runner.classList.toggle('run', true);
+  setTimeout(() => runner.classList.remove('run'), 1700);
+
+  // 오늘 먹은 음식이 멍뭉이에게 날아가요
+  const stage = $('#growStage');
+  stage.querySelectorAll('.fly').forEach((e) => e.remove());
+  const todayFood = g.feed.filter((f) => f.date === dateKey());
+  todayFood.slice(0, 5).forEach((f, i) => {
+    const el = document.createElement('span');
+    el.className = 'fly';
+    el.textContent = REWARDS[f.type].icon;
+    el.style.setProperty('--x', `${(i - (todayFood.length - 1) / 2) * 34}px`);
+    el.style.animationDelay = `${0.3 + i * 0.25}s`;
+    stage.appendChild(el);
+  });
+  if (todayFood.length) {
+    const yum = $('#yum');
+    setTimeout(() => { yum.hidden = false; char.classList.add('munch'); }, 900 + todayFood.length * 250);
+    setTimeout(() => { yum.hidden = true; char.classList.remove('munch'); }, 2600 + todayFood.length * 250);
   }
-  renderQuizStats();
-}
 
-function showCircle() {
-  const ox = $('#ox');
-  ox.classList.remove('show');
-  void ox.offsetWidth;
-  ox.classList.add('show');
-  setTimeout(() => ox.classList.remove('show'), 1600);
-}
+  $('#growCta').innerHTML = g.fedToday
+    ? '<p class="fed-ok">오늘 밥 먹었어요! 냠냠 😋 내일도 출석해 주세요</p>'
+    : '<a class="btn primary block" href="#today">🥣 오늘 출석하고 밥 주기</a>';
 
-function renderQuizStats() {
-  const entries = Object.entries(quizLog).sort((a, b) => b[0].localeCompare(a[0]));
-  const right = entries.filter(([, r]) => r.correct).length;
-  $('#quizStats').innerHTML = `
-    <div class="stat"><b>${entries.length}개</b><span>푼 퀴즈</span></div>
-    <div class="stat"><b>${right}개</b><span>맞힌 퀴즈</span></div>
-    <div class="stat"><b>${entries.length ? Math.round((right / entries.length) * 100) : 0}%</b><span>정답률</span></div>`;
-  $('#quizHistory').innerHTML = entries.length
-    ? entries.slice(0, 30).map(([d, r]) => {
-      const q = quizzes.find((x) => x.id === r.quizId);
-      return `<li><span class="mark">${r.correct ? '⭕' : '❌'}</span><span class="w">${escapeHtml(q ? q.word : r.word || '삭제된 퀴즈')}</span>
-        <span class="muted small">${q ? escapeHtml(q.options[q.answer]) : ''}</span><span class="d">${d}</span></li>`;
+  $('#growStats').innerHTML = `
+    <div class="stat"><b>${g.counts.meal}</b><span>🍚 밥</span></div>
+    <div class="stat"><b>${g.counts.snack + g.counts.feast + g.counts.photo}</b><span>🍪 간식</span></div>
+    <div class="stat"><b>${g.streak}일</b><span>🔥 연속 출석</span></div>`;
+
+  $('#growRoad').innerHTML = LEVELS.map((l, i) => `
+    <div class="node ${i < g.levelIndex ? 'done' : ''} ${i === g.levelIndex ? 'now' : ''}" style="--d:${i * 0.12}s">
+      <span class="dot">${i === g.levelIndex ? `<img src="assets/meongmung-sm.jpg" alt="" />` : l.icon}</span>
+      <span class="nm">${l.name}</span><span class="pt">${l.at}점</span>
+    </div>`).join('');
+
+  $('#feedList').innerHTML = g.feed.length
+    ? g.feed.slice(0, 12).map((f) => {
+      const r = REWARDS[f.type];
+      const why = { meal: '출석', snack: `${f.run}일 연속 출석`, feast: `${f.run}일 연속 출석`, photo: '사진 올리기', profile: '소개서 완성' }[f.type];
+      return `<li><span class="fi">${r.icon}</span><span>${r.name} <span class="muted small">· ${why}</span></span><b>+${r.pts}</b><span class="fd">${fmtDate(f.date)}</span></li>`;
     }).join('')
-    : '<li class="muted">아직 푼 퀴즈가 없어요.</li>';
+    : '<li class="muted">아직 먹은 게 없어요. 오늘 첫 출석으로 밥을 주세요! 🥣</li>';
 }
 
 route();

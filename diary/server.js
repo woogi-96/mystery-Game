@@ -7,7 +7,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_PROFILE, DEFAULT_TRAITS, DEFAULT_QUIZZES } from './js/defaults.js';
+import { DEFAULT_PROFILE, DEFAULT_TRAITS } from './js/defaults.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA = process.env.DATA_DIR || path.join(ROOT, 'data');
@@ -30,8 +30,6 @@ db.profile ??= structuredClone(DEFAULT_PROFILE);
 db.traitOptions ??= [...DEFAULT_TRAITS];
 db.diary ??= {};
 db.photos ??= [];
-db.quizzes ??= structuredClone(DEFAULT_QUIZZES);
-db.quizLog ??= {};
 db.adminPassword ??= process.env.ADMIN_PASSWORD || 'meongmung';
 if (process.env.ADMIN_PASSWORD && process.env.RESET_PASSWORD === '1') db.adminPassword = process.env.ADMIN_PASSWORD;
 
@@ -94,14 +92,6 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function checkDate(d) {
   if (!DATE_RE.test(d)) throw new HttpError(400, '날짜 형식이 올바르지 않아요');
   return d;
-}
-function cleanQuiz(q) {
-  const options = Array.isArray(q.options) ? q.options.slice(0, 4).map((o) => str(o, 60)) : [];
-  const answer = Number(q.answer);
-  if (!str(q.word, 30) || options.length !== 4 || options.some((o) => !o) || !(answer >= 0 && answer <= 3)) {
-    throw new HttpError(400, '신조어, 보기 4개, 정답을 모두 입력해 주세요');
-  }
-  return { word: str(q.word, 30), question: str(q.question, 80), options, answer, reason: str(q.reason, 300) };
 }
 const newId = () => Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
 
@@ -199,49 +189,6 @@ async function handleApi(req, res, parts) {
       await fsp.rm(path.join(UPLOADS, photo.file), { force: true });
       await save();
       return send(res, 200, { ok: true });
-    }
-  }
-
-  if (resource === 'quizzes') {
-    if (m === 'GET' && !id) return send(res, 200, db.quizzes);
-    requireAdmin(req);
-    if (m === 'POST' && !id) {
-      const q = { id: newId(), ...cleanQuiz(await readJson(req)) };
-      db.quizzes.push(q);
-      await save();
-      return send(res, 201, q);
-    }
-    const i = db.quizzes.findIndex((q) => q.id === id);
-    if (i < 0) throw new HttpError(404, '퀴즈를 찾을 수 없어요');
-    if (m === 'PUT') {
-      db.quizzes[i] = { id, ...cleanQuiz(await readJson(req)) };
-      await save();
-      return send(res, 200, db.quizzes[i]);
-    }
-    if (m === 'DELETE') {
-      db.quizzes.splice(i, 1);
-      await save();
-      return send(res, 200, { ok: true });
-    }
-  }
-
-  if (resource === 'quiz-log') {
-    if (m === 'GET' && !id) return send(res, 200, db.quizLog);
-    if (m === 'DELETE' && !id) {
-      requireAdmin(req);
-      db.quizLog = {};
-      await save();
-      return send(res, 200, { ok: true });
-    }
-    if (m === 'PUT' && id) {
-      checkDate(id);
-      const r = await readJson(req);
-      // 하루에 한 번만 기록 (처음 고른 답 유지)
-      if (!db.quizLog[id]) {
-        db.quizLog[id] = { quizId: str(r.quizId, 40), word: str(r.word, 30), choice: Number(r.choice), correct: !!r.correct, at: new Date().toISOString() };
-        await save();
-      }
-      return send(res, 200, db.quizLog[id]);
     }
   }
 

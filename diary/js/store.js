@@ -1,7 +1,7 @@
 // 데이터 저장소
 // - server.js 로 실행하면: 서버(API)에 저장 → 멍뭉이와 우기가 같은 데이터를 봐요
 // - 정적 호스팅(GitHub Pages 등)이나 파일로 열면: 이 브라우저(IndexedDB)에만 저장돼요
-import { DEFAULT_PROFILE, DEFAULT_TRAITS, DEFAULT_QUIZZES } from './defaults.js';
+import { DEFAULT_PROFILE, DEFAULT_TRAITS } from './defaults.js';
 
 const API = 'api';
 const ADMIN_KEY = 'mm-admin-key';
@@ -164,46 +164,6 @@ export const store = {
     return { ok: true };
   },
 
-  // 퀴즈
-  getQuizzes: () => (local ? kvGet('quizzes', DEFAULT_QUIZZES) : api('quizzes')),
-  saveQuiz: async (q) => {
-    if (!local) return q.id ? api(`quizzes/${q.id}`, { method: 'PUT', body: q, admin: true }) : api('quizzes', { method: 'POST', body: q, admin: true });
-    await localAdminCheck();
-    const list = await kvGet('quizzes', DEFAULT_QUIZZES);
-    if (q.id) {
-      const i = list.findIndex((x) => x.id === q.id);
-      if (i >= 0) list[i] = q; else list.push(q);
-    } else {
-      q = { ...q, id: newId() };
-      list.push(q);
-    }
-    await kvSet('quizzes', list);
-    return q;
-  },
-  deleteQuiz: async (id) => {
-    if (!local) return api(`quizzes/${id}`, { method: 'DELETE', admin: true });
-    await localAdminCheck();
-    const list = await kvGet('quizzes', DEFAULT_QUIZZES);
-    await kvSet('quizzes', list.filter((x) => x.id !== id));
-    return { ok: true };
-  },
-
-  // 퀴즈 기록 { 'YYYY-MM-DD': { quizId, choice, correct, at } }
-  getQuizLog: () => (local ? kvGet('quizLog', {}) : api('quiz-log')),
-  saveQuizAnswer: async (date, rec) => {
-    if (!local) return api(`quiz-log/${date}`, { method: 'PUT', body: rec });
-    const log = await kvGet('quizLog', {});
-    if (!log[date]) log[date] = { ...rec, at: new Date().toISOString() };
-    await kvSet('quizLog', log);
-    return log[date];
-  },
-  resetQuizLog: async () => {
-    if (!local) return api('quiz-log', { method: 'DELETE', admin: true });
-    await localAdminCheck();
-    await kvSet('quizLog', {});
-    return { ok: true };
-  },
-
   // 관리자
   isAdmin: () => !!adminKey(),
   login: async (pw) => {
@@ -231,8 +191,6 @@ export const store = {
       profile: await kvGet('profile', DEFAULT_PROFILE),
       traitOptions: await kvGet('traitOptions', DEFAULT_TRAITS),
       diary: await kvGet('diary', {}),
-      quizzes: await kvGet('quizzes', DEFAULT_QUIZZES),
-      quizLog: await kvGet('quizLog', {}),
       photos,
     };
   },

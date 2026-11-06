@@ -24,11 +24,15 @@
     <!-- 1. 소개 -->
     <section class="page" id="page-intro" hidden>
       <div class="hero card">
-        <div class="hero-art" id="heroArt"></div>
+        <div class="stage3d" id="stage3d">
+          <div class="greet-bubble" id="greetBubble" hidden></div>
+          <button class="replay" id="replayBtn" type="button" aria-label="인사 다시 보기" hidden>↺</button>
+        </div>
         <div class="hero-text">
-          <p class="eyebrow">멍뭉이의 하루를 기록하는 곳</p>
-          <h1>안녕! 여기는 <em>멍뭉일지</em>야</h1>
-          <p>귀여운 멍뭉이가 매일 한 줄씩 하루를 남기고, 사진을 나누고, 신조어 퀴즈도 푸는 우리만의 작은 일지예요.</p>
+          <p class="eyebrow" id="timeLabel"></p>
+          <h1 id="greetLine"></h1>
+          <p id="greetSub"></p>
+          <p class="muted small">여기는 멍뭉이의 하루를 기록하는 <b>멍뭉일지</b>예요. 멍뭉이를 톡 누르면 점프해요!</p>
           <a class="btn primary" href="#today">오늘 일기 쓰러 가기 →</a>
         </div>
       </div>
@@ -50,10 +54,10 @@
           <h3>3. 멍뭉이와 함께</h3>
           <p>함께 보고 싶은 <b>사진을 올리고</b>, 마음에 드는 사진은 <b>다운로드</b>할 수 있어요.</p>
         </a>
-        <a class="how card" href="#quiz">
-          <span class="how-icon">💡</span>
-          <h3>4. 멍뭉 퀴즈</h3>
-          <p>매일 <b>신조어 퀴즈</b>가 1개씩! 틀리면 정답과 이유를 알려줘요.</p>
+        <a class="how card" href="#growth">
+          <span class="how-icon">🌱</span>
+          <h3>4. 멍뭉 성장</h3>
+          <p>출석할수록 멍뭉이에게 <b>밥과 간식</b>이 쌓여서 쑥쑥 자라요!</p>
         </a>
       </div>
 
@@ -133,13 +137,40 @@
       <div class="gallery" id="gallery"></div>
     </section>
 
-    <!-- 4. 멍뭉 퀴즈 -->
-    <section class="page" id="page-quiz" hidden>
-      <div class="card quiz" id="quizCard"></div>
-      <div class="stats" id="quizStats"></div>
+    <!-- 4. 멍뭉 성장 -->
+    <section class="page" id="page-growth" hidden>
+      <div class="card grow-hero">
+        <div class="grow-top">
+          <span class="lv-badge" id="lvBadge"></span>
+          <span class="muted small" id="lvNext"></span>
+        </div>
+        <div class="grow-stage" id="growStage">
+          <div class="grow-char" id="growChar"><img src="assets/meongmung.jpg" alt="자라는 멍뭉" /></div>
+          <div class="yum" id="yum" hidden>냠냠!</div>
+        </div>
+        <div class="meter" aria-label="성장 게이지">
+          <div class="meter-fill" id="meterFill"></div>
+          <div class="meter-runner" id="meterRunner">🍚</div>
+        </div>
+        <div class="meter-labels"><span id="meterFrom"></span><b id="meterPct"></b><span id="meterTo"></span></div>
+        <div id="growCta"></div>
+      </div>
+
+      <div class="stats" id="growStats"></div>
+
       <div class="card">
-        <h3>지난 퀴즈</h3>
-        <ul class="history" id="quizHistory"></ul>
+        <h3>멍뭉이 성장 길</h3>
+        <div class="road" id="growRoad"></div>
+      </div>
+
+      <div class="card">
+        <h3>냠냠 기록</h3>
+        <ul class="feed" id="feedList"></ul>
+      </div>
+
+      <div class="card tips">
+        <h3>🍯 멍뭉이가 쑥쑥 크는 꿀팁</h3>
+        <ul class="tip-list" id="tipList"></ul>
       </div>
     </section>
   </main>
@@ -148,7 +179,7 @@
       <a href="#intro" data-tab="intro"><span class="ic">🐾</span> 소개</a>
       <a href="#today" data-tab="today"><span class="ic">📒</span> 오늘의 멍뭉</a>
       <a href="#together" data-tab="together"><span class="ic">📸</span> 멍뭉이와 함께</a>
-      <a href="#quiz" data-tab="quiz"><span class="ic">💡</span> 멍뭉 퀴즈</a>
+      <a href="#growth" data-tab="growth"><span class="ic">🌱</span> 멍뭉 성장</a>
   </nav>
 
   <footer class="site-footer">
@@ -166,10 +197,6 @@
     </div>
   </dialog>
 
-  <!-- 정답 동그라미 -->
-  <div id="ox" aria-hidden="true">
-    <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="78" /></svg>
-  </div>
 
   <script type="module" src="js/app.js"></script>
 </body>

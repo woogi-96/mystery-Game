@@ -28,7 +28,7 @@
     <section class="card admin-login" id="loginBox" hidden>
       <img src="assets/meongmung-sm.jpg" alt="" />
       <h2>관리자 로그인</h2>
-      <p class="muted small">일기·사진·퀴즈를 관리하려면 비밀번호를 입력해 주세요.</p>
+      <p class="muted small">일기·사진·소개서를 관리하려면 비밀번호를 입력해 주세요.</p>
       <form id="loginForm">
         <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password" required />
         <button class="btn primary" type="submit">로그인</button>
@@ -39,7 +39,6 @@
       <div class="admin-tabs" id="adminTabs">
         <button data-t="diary" class="active">📒 일기</button>
         <button data-t="photos">📸 사진</button>
-        <button data-t="quizzes">💡 퀴즈</button>
         <button data-t="profile">🐾 소개서 특징</button>
         <button data-t="settings">⚙️ 설정</button>
       </div>
@@ -52,36 +51,6 @@
       <div class="card" data-panel="photos" hidden>
         <h3>사진 관리</h3>
         <div class="admin-photos" id="photoGrid"></div>
-      </div>
-
-      <div data-panel="quizzes" hidden>
-        <div class="card">
-          <h3 id="quizFormTitle">새 퀴즈 추가</h3>
-          <form class="quiz-form" id="quizForm">
-            <input type="hidden" name="id" />
-            <label>신조어 <input name="word" required maxlength="30" placeholder="예) 갓생" /></label>
-            <label>질문 (선택) <input name="question" maxlength="80" placeholder="이 말의 뜻은 무엇일까요?" /></label>
-            <div>
-              <label>보기 (정답 동그라미를 눌러 주세요)</label>
-              <div class="opts">
-                <div class="opt-row"><input type="radio" name="answer" value="0" required /><input name="o0" required maxlength="60" placeholder="보기 1" /></div>
-                <div class="opt-row"><input type="radio" name="answer" value="1" /><input name="o1" required maxlength="60" placeholder="보기 2" /></div>
-                <div class="opt-row"><input type="radio" name="answer" value="2" /><input name="o2" required maxlength="60" placeholder="보기 3" /></div>
-                <div class="opt-row"><input type="radio" name="answer" value="3" /><input name="o3" required maxlength="60" placeholder="보기 4" /></div>
-              </div>
-            </div>
-            <label>정답 이유 <textarea name="reason" rows="2" maxlength="300" required placeholder="틀렸을 때 보여줄 설명"></textarea></label>
-            <div class="btn-row">
-              <button class="btn" type="button" id="quizCancel" hidden>취소</button>
-              <button class="btn primary" type="submit" id="quizSubmit">추가</button>
-            </div>
-          </form>
-        </div>
-        <div class="card">
-          <div class="head-row"><h3>퀴즈 목록 <small class="muted" id="quizCount"></small></h3>
-            <button class="btn danger sm" id="resetLog">기록 초기화</button></div>
-          <ul class="list" id="quizRows"></ul>
-        </div>
       </div>
 
       <div class="card" data-panel="profile" hidden>
