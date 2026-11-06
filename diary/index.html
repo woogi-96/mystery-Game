@@ -64,12 +64,12 @@
         <a class="how card" href="#today">
           <span class="how-icon">📒</span>
           <h3>2. 오늘의 멍뭉</h3>
-          <p>매일 <b>한 줄 일기</b>를 써요. 쓰면 달력에 발바닥 도장이 쾅! 출석 체크돼요.</p>
+          <p>매일 <b>한 줄 일기</b>를 써요. 쓰면 달력에 발바닥 도장이 쾅! 날짜를 누르면 그날 다녀온 곳과 사진도 보여요.</p>
         </a>
         <a class="how card" href="#together">
           <span class="how-icon">📸</span>
           <h3>3. 멍뭉이와 함께</h3>
-          <p>함께 보고 싶은 <b>사진을 올리고</b>, 마음에 드는 사진은 <b>다운로드</b>할 수 있어요.</p>
+          <p>같이 <b>다녀온 곳</b>을 남기고, <b>사진</b>을 올리고 다운로드해요. 달력에서 그날의 장소와 사진을 다시 봐요.</p>
         </a>
         <a class="how card" href="#growth">
           <span class="how-icon">🌱</span>
@@ -137,22 +137,64 @@
 
     <!-- 3. 멍뭉이와 함께 -->
     <section class="page" id="page-together" hidden>
-      <div class="card upload">
-        <h2>멍뭉이와 함께 📸</h2>
-        <p class="muted">같이 보고 싶은 사진을 올려 주세요. 사진을 누르면 크게 보고 다운로드할 수 있어요.</p>
-        <form id="uploadForm">
-          <label class="drop" id="drop">
-            <input type="file" id="fileInput" accept="image/*" multiple />
-            <span class="drop-icon">＋</span>
-            <span id="dropText">여기를 눌러 사진 고르기 (또는 끌어다 놓기)</span>
-          </label>
-          <div class="upload-row">
-            <input id="captionInput" maxlength="60" placeholder="사진 한마디 (선택)" />
-            <button class="btn primary" type="submit" id="uploadBtn" disabled>올리기</button>
-          </div>
-        </form>
+      <div class="seg big" id="togetherTabs" role="tablist" aria-label="멍뭉이와 함께">
+        <button type="button" data-v="places" class="active" role="tab">📍 다녀온 곳</button>
+        <button type="button" data-v="photos" role="tab">📸 사진</button>
       </div>
-      <div class="gallery" id="gallery"></div>
+
+      <div id="viewPlaces">
+        <div class="card">
+          <div class="head-row"><h2 id="placeFormTitle">함께 다녀온 곳 남기기</h2><button class="btn sm" id="placeCancel" type="button" hidden>취소</button></div>
+          <form class="place-form" id="placeForm">
+            <div class="two">
+              <label>날짜 <input type="date" id="placeDate" required /></label>
+              <label>장소 이름 <input id="placeName" maxlength="40" placeholder="예) 성수동 소품샵" required /></label>
+            </div>
+            <label>동네 · 주소 <small>(지도에서 찾을 때 써요)</small>
+              <input id="placeArea" maxlength="60" placeholder="예) 서울 성동구 성수동" /></label>
+            <div>
+              <span class="label">어떤 곳이었나요?</span>
+              <div class="chips cat-chips" id="placeCats"></div>
+            </div>
+            <label>한 줄 추억 <textarea id="placeMemo" rows="2" maxlength="200" placeholder="예) 곰발바닥 장갑 끼고 사진 찍은 날 🐾"></textarea></label>
+            <label class="drop small" id="placeDrop">
+              <input type="file" id="placeFiles" accept="image/*" multiple />
+              <span class="drop-icon">＋</span>
+              <span id="placeDropText">그날 사진 추가하기 (선택)</span>
+            </label>
+            <div class="previews" id="placePreviews"></div>
+            <button class="btn primary block" type="submit" id="placeSave">📍 추억 장소 저장</button>
+          </form>
+        </div>
+
+        <div class="card memory-map">
+          <h3>우리 추억 지도</h3>
+          <p class="muted small" id="mapSummary"></p>
+          <div class="area-chips" id="areaChips"></div>
+        </div>
+
+        <div class="place-list" id="placeList"></div>
+      </div>
+
+      <div id="viewPhotos" hidden>
+        <div class="card upload">
+          <h2>멍뭉이와 함께 📸</h2>
+          <p class="muted">같이 보고 싶은 사진을 올려 주세요. 사진을 누르면 크게 보고 다운로드할 수 있어요.</p>
+          <form id="uploadForm">
+            <label class="drop" id="drop">
+              <input type="file" id="fileInput" accept="image/*" multiple />
+              <span class="drop-icon">＋</span>
+              <span id="dropText">여기를 눌러 사진 고르기 (또는 끌어다 놓기)</span>
+            </label>
+            <div class="upload-row">
+              <input id="captionInput" maxlength="60" placeholder="사진 한마디 (선택)" />
+              <label class="inline">찍은 날 <input type="date" id="photoDate" /></label>
+              <button class="btn primary" type="submit" id="uploadBtn" disabled>올리기</button>
+            </div>
+          </form>
+        </div>
+        <div class="gallery" id="gallery"></div>
+      </div>
     </section>
 
     <!-- 4. 멍뭉 성장 -->
@@ -218,6 +260,7 @@
       <div class="admin-tabs" id="adminTabs">
         <button data-t="diary" class="active">📒 일기 · 도장</button>
         <button data-t="photos">📸 사진</button>
+        <button data-t="places">📍 장소</button>
         <button data-t="profile">🐾 소개서 특징</button>
         <button data-t="data">🗑️ 데이터 삭제</button>
         <button data-t="settings">⚙️ 설정</button>
@@ -236,6 +279,12 @@
       <div class="card" data-panel="photos" hidden>
         <h3>사진 관리</h3>
         <div class="admin-photos" id="photoGrid"></div>
+      </div>
+
+      <div class="card" data-panel="places" hidden>
+        <h3>다녀온 곳 관리</h3>
+        <p class="muted small">장소를 지워도 그날 올린 사진은 사진 메뉴에 남아 있어요.</p>
+        <ul class="list" id="placeRows"></ul>
       </div>
 
       <div class="card" data-panel="profile" hidden>
@@ -257,10 +306,11 @@
         <ul class="list wipe-list">
           <li><div class="body"><b>한 줄 일기</b><span class="meta">모든 일기와 출석 기록</span></div><div class="actions"><button class="btn danger sm" data-wipe="diary,stamps" type="button">삭제</button></div></li>
           <li><div class="body"><b>참 잘했어요 도장</b><span class="meta">찍어 준 도장만 (일기는 그대로)</span></div><div class="actions"><button class="btn danger sm" data-wipe="stamps" type="button">삭제</button></div></li>
+          <li><div class="body"><b>다녀온 곳</b><span class="meta">추억 장소 기록 전부 (사진은 그대로)</span></div><div class="actions"><button class="btn danger sm" data-wipe="places" type="button">삭제</button></div></li>
           <li><div class="body"><b>사진</b><span class="meta">올린 사진 전부</span></div><div class="actions"><button class="btn danger sm" data-wipe="photos" type="button">삭제</button></div></li>
           <li><div class="body"><b>멍뭉이 소개서</b><span class="meta">처음 상태로 되돌려요</span></div><div class="actions"><button class="btn danger sm" data-wipe="profile" type="button">초기화</button></div></li>
         </ul>
-        <button class="btn danger block" data-wipe="diary,stamps,photos,profile" type="button" style="margin-top:14px">⚠️ 모든 데이터 한 번에 삭제</button>
+        <button class="btn danger block" data-wipe="diary,stamps,photos,profile,places" type="button" style="margin-top:14px">⚠️ 모든 데이터 한 번에 삭제</button>
         <div class="pin-admin" id="pinAdmin">
           <h3>입장 비밀번호</h3>
           <p class="muted small" id="pinAdminText"></p>

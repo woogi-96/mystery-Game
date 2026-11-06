@@ -426,3 +426,49 @@ body.admin-mode #toasts { bottom: 20px; }
 .legal[open] summary { margin-bottom: 6px; font-weight: 700; text-decoration: none; color: var(--ink); }
 .legal p { margin: 0 0 6px; word-break: keep-all; }
 .site-footer .copy { font-size: .7rem; opacity: .8; }
+
+/* ---------- 📍 다녀온 곳 ---------- */
+.seg.big { display: flex; width: 100%; margin: 0 0 14px; padding: 4px; background: #fff; box-shadow: var(--shadow); }
+.seg.big button { flex: 1; font-family: 'Jua', sans-serif; font-size: 1rem; padding: 10px 8px; }
+.seg.big button.active { background: var(--mint); color: #fff; box-shadow: 0 3px 0 var(--mint-dark); }
+.place-form { display: grid; gap: 12px; }
+.place-form .two { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+.place-form .two > * { min-width: 0; }
+.place-form small { font-weight: 400; color: var(--muted); }
+.place-form .label { display: block; font-weight: 700; color: var(--muted); font-size: .88rem; margin-bottom: 6px; }
+.cat-chips .chip { font-size: .85rem; padding: 5px 11px; }
+.cat-chips .chip[aria-pressed="true"]::before { content: ''; }
+.drop.small { padding: 14px 12px; margin: 0; flex-direction: row; gap: 8px; }
+.drop.small .drop-icon { font-size: 1.4rem; }
+.place-form .previews:empty { display: none; }
+.memory-map { background: linear-gradient(160deg, #ffffff 40%, var(--mint-soft)); }
+.memory-map p { margin: 0 0 8px; }
+.area-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.area-chips:empty { display: none; }
+.area-chips .chip b { color: var(--mint-dark); margin-left: 2px; }
+.area-chips .chip[aria-pressed="true"] b { color: #fff; }
+.area-chips .chip[aria-pressed="true"]::before { content: ''; }
+.place-list { display: grid; gap: 12px; margin-bottom: 18px; }
+.place-card { background: var(--card); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); border: 2px solid #fff; }
+.place-card.compact { padding: 10px 12px; box-shadow: none; border: 2px solid var(--line); margin-bottom: 8px; }
+.pc-head { display: flex; align-items: center; gap: 10px; }
+.pc-icon { flex: none; width: 40px; height: 40px; border-radius: 14px; background: var(--yellow-soft); display: grid; place-items: center; font-size: 1.3rem; }
+.pc-title { flex: 1; min-width: 0; }
+.pc-title b { display: block; font-family: 'Jua', sans-serif; font-weight: 400; font-size: 1.05rem; line-height: 1.3; word-break: keep-all; }
+.pc-meta { display: block; color: var(--muted); font-size: .78rem; line-height: 1.4; word-break: keep-all; }
+.pc-memo { margin: 8px 0 0; font-size: .95rem; line-height: 1.5; word-break: keep-all; }
+.pc-photos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.thumb { padding: 0; border: 0; border-radius: 10px; overflow: hidden; aspect-ratio: 1; cursor: zoom-in; background: var(--line); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.map-links { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.map-links a { font-size: .78rem; text-decoration: none; padding: 4px 10px; border-radius: 999px; background: var(--mint-soft); color: var(--mint-dark); font-weight: 700; }
+.map-links a:first-child::before { content: '🗺️ '; }
+.upload-row .inline { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.upload-row .inline input { margin: 0; }
+
+/* 달력 아래 그날의 기록 */
+.cal-pin { position: absolute; left: 1px; top: -4px; font-size: .7rem; line-height: 1; }
+.day-diary { margin-bottom: 4px; }
+.day-h { margin: 14px 0 8px; font-family: 'Jua', sans-serif; font-weight: 400; font-size: .98rem; color: var(--brown); }
+.cal-detail .place-card.compact { background: #fff; }
+.add-place { margin-top: 12px; width: 100%; border: 2px dashed var(--mint); background: rgba(255,255,255,.6); color: var(--mint-dark); border-radius: 14px; padding: 10px; font: inherit; font-weight: 700; cursor: pointer; }

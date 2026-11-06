@@ -20,8 +20,17 @@ async function show() {
   if (authed) loadAll();
 }
 
+async function loadPlaces() {
+  const places = await store.getPlaces();
+  $('#placeRows').innerHTML = places.length
+    ? places.map((p) => `<li><div class="body"><span class="meta">${fmt(p.date)}${p.area ? ` · ${escapeHtml(p.area)}` : ''}</span><b>${escapeHtml(p.name)}</b>${p.memo ? `<span class="meta">${escapeHtml(p.memo)}</span>` : ''}</div>
+        <div class="actions"><button class="btn danger sm" data-del="${escapeHtml(p.id)}" type="button">삭제</button></div></li>`).join('')
+    : '<li class="muted">아직 남긴 장소가 없어요.</li>';
+}
+
 function loadAll() {
   loadDiary().catch(fail);
+  loadPlaces().catch(fail);
   loadPhotos().catch(fail);
   loadTraits().catch(fail);
   $('#pinReset').hidden = store.canResetOwnPin;
@@ -146,20 +155,25 @@ export function init() {
   });
 
   // 데이터 삭제 (관리자만)
-  const WIPE_LABEL = { diary: '한 줄 일기', stamps: '참 잘했어요 도장', photos: '사진', profile: '멍뭉이 소개서' };
+  const WIPE_LABEL = { diary: '한 줄 일기', stamps: '참 잘했어요 도장', photos: '사진', profile: '멍뭉이 소개서', places: '다녀온 곳' };
   $('[data-panel="data"]').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-wipe]');
     if (!b) return;
     const kinds = b.dataset.wipe.split(',');
-    const what = kinds.length >= 4 ? '모든 데이터(일기, 도장, 사진, 소개서)' : kinds.filter((k) => !(k === 'stamps' && kinds.includes('diary'))).map((k) => WIPE_LABEL[k]).join(', ');
+    const what = kinds.length >= 5 ? '모든 데이터(일기, 도장, 사진, 소개서, 다녀온 곳)' : kinds.filter((k) => !(k === 'stamps' && kinds.includes('diary'))).map((k) => WIPE_LABEL[k]).join(', ');
     if (!(await askConfirm(`${what}를 모두 삭제할까요? 되돌릴 수 없어요.`, '삭제하기'))) return;
-    if (kinds.length >= 4 && !(await askConfirm('정말 전부 지울까요? 마지막으로 한 번 더 확인해요.', '전부 삭제'))) return;
+    if (kinds.length >= 5 && !(await askConfirm('정말 전부 지울까요? 마지막으로 한 번 더 확인해요.', '전부 삭제'))) return;
     b.disabled = true;
     try {
       await store.wipe(kinds);
       toast(`${what}를 삭제했어요`);
       loadAll();
     } catch (err) { fail(err); } finally { b.disabled = false; }
+  });
+  $('#placeRows').addEventListener('click', async (e) => {
+    const id = e.target.closest('[data-del]')?.dataset.del;
+    if (!id || !(await askConfirm('이 장소 기록을 삭제할까요?'))) return;
+    try { await store.deletePlace(id); toast('장소를 삭제했어요'); loadPlaces(); } catch (err) { fail(err); }
   });
   $('#pinReset').addEventListener('click', async () => {
     if (!(await askConfirm('입장 비밀번호를 지울까요? 다음에 들어오는 사람이 새 비밀번호 4자리를 정하게 돼요.', '초기화'))) return;

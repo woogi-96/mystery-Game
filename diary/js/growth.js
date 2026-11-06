@@ -8,6 +8,7 @@ export const REWARDS = {
   photo: { icon: '🦴', name: '개껌', pts: 3 },     // 사진 1장
   profile: { icon: '🎀', name: '리본', pts: 10 },  // 소개서 완성 (특징 3개 이상)
   praise: { icon: '🍬', name: '칭찬 사탕', pts: 5 }, // 참 잘했어요 도장 1개
+  place: { icon: '🍦', name: '나들이 아이스크림', pts: 5 }, // 함께 다녀온 곳 1곳
 };
 
 export const LEVELS = [
@@ -24,7 +25,7 @@ const nextDay = (key) => {
   return dateKey(new Date(y, m - 1, d + 1));
 };
 
-export function computeGrowth({ diary = {}, photos = [], profile = {}, stamps = {} }) {
+export function computeGrowth({ diary = {}, photos = [], profile = {}, stamps = {}, places = [] }) {
   const feed = []; // { date, type }
   const days = Object.keys(diary).sort();
   let run = 0;
@@ -37,6 +38,7 @@ export function computeGrowth({ diary = {}, photos = [], profile = {}, stamps = 
     if (run % 7 === 0) feed.push({ date: d, type: 'feast', run });
   }
   for (const d of Object.keys(stamps)) if (diary[d]) feed.push({ date: d, type: 'praise' });
+  for (const p of places) feed.push({ date: p.date, type: 'place', name: p.name });
   for (const p of photos) feed.push({ date: dateKey(new Date(p.uploadedAt)), type: 'photo' });
   if ((profile.traits || []).length >= 3) {
     feed.push({ date: profile.updatedAt ? dateKey(new Date(profile.updatedAt)) : dateKey(), type: 'profile' });
@@ -61,7 +63,7 @@ export function computeGrowth({ diary = {}, photos = [], profile = {}, stamps = 
   return {
     points, level, levelIndex: li, next, progress, feed, streak,
     fedToday: !!diary[today],
-    counts: { meal: count('meal'), snack: count('snack'), feast: count('feast'), photo: count('photo'), praise: count('praise') },
+    counts: { meal: count('meal'), snack: count('snack'), feast: count('feast'), photo: count('photo'), praise: count('praise'), place: count('place') },
     toNext: next ? next.at - points : 0,
   };
 }
@@ -73,5 +75,6 @@ export const TIPS = [
   { icon: '🦴', title: '함께 찍은 사진 올리기', text: '“멍뭉이와 함께”에 사진을 올릴 때마다 개껌(+3)을 줘요. 추억도 쌓고 멍뭉이도 크고!' },
   { icon: '🎀', title: '소개서 완성하기', text: '소개 메뉴에서 특징을 3개 이상 골라 저장하면 리본(+10)을 달아 줘요.' },
   { icon: '💮', title: '참 잘했어요 도장 받기', text: '정성껏 쓴 일기에는 관리자가 “참 잘했어요” 도장을 찍어 줘요. 도장 하나마다 칭찬 사탕(+5)!' },
+  { icon: '🍦', title: '같이 다녀온 곳 남기기', text: '“멍뭉이와 함께 → 다녀온 곳”에 데이트 장소를 남기면 나들이 아이스크림(+5)! 달력에서 그날의 추억을 다시 볼 수 있어요.' },
   { icon: '💤', title: '저녁엔 푹 쉬기', text: '멍뭉이는 잘 자야 커요. 저녁 인사를 들었다면 오늘의 기록을 남기고 푹 쉬어요.' },
 ];

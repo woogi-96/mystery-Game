@@ -31,6 +31,7 @@ db.traitOptions ??= [...DEFAULT_TRAITS];
 db.diary ??= {};
 db.photos ??= [];
 db.stamps ??= {};
+db.places ??= [];
 db.lock ??= null; // { salt, hash } 입장 비밀번호
 db.adminPassword ??= process.env.ADMIN_PASSWORD || 'meongmung';
 if (process.env.ADMIN_PASSWORD && process.env.RESET_PASSWORD === '1') db.adminPassword = process.env.ADMIN_PASSWORD;
@@ -166,10 +167,13 @@ async function handleApi(req, res, parts) {
       let caption = '';
       try { name = decodeURIComponent(req.headers['x-file-name'] || name); } catch { /* 무시 */ }
       try { caption = decodeURIComponent(req.headers['x-caption'] || ''); } catch { /* 무시 */ }
+      let extra = {};
+      try { extra = JSON.parse(decodeURIComponent(req.headers['x-extra'] || '{}')) || {}; } catch { /* 무시 */ }
       const pid = newId();
       const file = pid + (EXT[type] || path.extname(name).toLowerCase().replace(/[^.a-z0-9]/g, '') || '.img');
       await fsp.writeFile(path.join(UPLOADS, file), buf);
-      const meta = { id: pid, file, name: str(path.basename(name), 120) || 'photo.jpg', caption: str(caption, 60), type, size: buf.length, uploadedAt: new Date().toISOString() };
+      const meta = { id: pid, file, name: str(path.basename(name), 120) || 'photo.jpg', caption: str(caption, 60), type, size: buf.length, uploadedAt: new Date().toISOString(),
+        ...(DATE_RE.test(extra.date || '') ? { date: extra.date } : {}), ...(extra.placeId ? { placeId: str(extra.placeId, 40) } : {}) };
       db.photos.unshift(meta);
       await save();
       return send(res, 201, meta);
@@ -195,6 +199,33 @@ async function handleApi(req, res, parts) {
       requireAdmin(req);
       db.photos = db.photos.filter((p) => p.id !== id);
       await fsp.rm(path.join(UPLOADS, photo.file), { force: true });
+      await save();
+      return send(res, 200, { ok: true });
+    }
+  }
+
+  if (resource === 'places') {
+    if (m === 'GET' && !id) return send(res, 200, [...db.places].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)));
+    const clean = (p) => {
+      if (!DATE_RE.test(p.date || '') || !str(p.name, 40)) throw new HttpError(400, '날짜와 장소 이름을 써 주세요');
+      return { date: p.date, name: str(p.name, 40), area: str(p.area, 60), category: str(p.category, 12), memo: str(p.memo, 200) };
+    };
+    if (m === 'POST' && !id) {
+      const place = { id: newId(), ...clean(await readJson(req)), createdAt: new Date().toISOString() };
+      db.places.push(place);
+      await save();
+      return send(res, 201, place);
+    }
+    const i = db.places.findIndex((p) => p.id === id);
+    if (i < 0) throw new HttpError(404, '장소를 찾을 수 없어요');
+    if (m === 'PUT') {
+      db.places[i] = { ...db.places[i], ...clean(await readJson(req)) };
+      await save();
+      return send(res, 200, db.places[i]);
+    }
+    if (m === 'DELETE') {
+      requireAdmin(req);
+      db.places.splice(i, 1);
       await save();
       return send(res, 200, { ok: true });
     }
@@ -250,6 +281,7 @@ async function handleApi(req, res, parts) {
       const { kinds = [] } = await readJson(req);
       if (kinds.includes('diary')) db.diary = {};
       if (kinds.includes('stamps')) db.stamps = {};
+      if (kinds.includes('places')) db.places = [];
       if (kinds.includes('profile')) db.profile = structuredClone(DEFAULT_PROFILE);
       if (kinds.includes('photos')) {
         for (const p of db.photos) await fsp.rm(path.join(UPLOADS, p.file), { force: true });

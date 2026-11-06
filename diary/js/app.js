@@ -1,6 +1,7 @@
 import { store, dateKey, escapeHtml, toast, downloadPhoto } from './store.js';
 import { meongmungImg, meongmungSmall, pawStampSVG, praiseStampSVG } from './character.js';
 import { gate, isUnlocked } from './lock.js';
+import { initPlaces, placeCard, photoDay, render as renderPlaces } from './places.js';
 import { GREETINGS, timePhase } from './greeting.js';
 import { computeGrowth, LEVELS, REWARDS, TIPS } from './growth.js';
 
@@ -28,9 +29,9 @@ function route() {
     renderGrowth().catch(showError);
   }
   if (page === 'admin' && adminMod) adminMod.refresh();
+  if (page === 'together' && loaded.together) applyPendingPlaceDate();
   if (page === 'today' && loaded.todayReady) {
-    Promise.all([store.getDiary(), store.getStamps().catch(() => ({}))])
-      .then(([d, st]) => { diary = d; stamps = st; fillTodayForm(); renderCalendar(); }).catch(showError);
+    loadToday().then(() => { fillTodayForm(); renderCalendar(); }).catch(showError);
   }
   window.scrollTo({ top: 0 });
 }
@@ -152,8 +153,15 @@ let calMonth = new Date(); calMonth.setDate(1);
 let selectedDay = null;
 
 let stamps = {};
+let calPlaces = [];
+let calPhotos = [];
+async function loadToday() {
+  [diary, stamps, calPlaces, calPhotos] = await Promise.all([
+    store.getDiary(), store.getStamps().catch(() => ({})), store.getPlaces().catch(() => []), store.listPhotos().catch(() => []),
+  ]);
+}
 async function initToday() {
-  [diary, stamps] = await Promise.all([store.getDiary(), store.getStamps().catch(() => ({}))]);
+  await loadToday();
   const d = new Date();
   $('#todayLabel').textContent = d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
   const input = $('#diaryInput');
@@ -186,6 +194,15 @@ async function initToday() {
     selectedDay = b.dataset.date;
     renderCalendar();
   });
+  $('#calDetail').addEventListener('click', (e) => {
+    const ph = e.target.closest('[data-photo]');
+    if (ph) { openPhoto(calPhotos.find((x) => x.id === ph.dataset.photo)); return; }
+    const add = e.target.closest('[data-add-place]');
+    if (add) {
+      pendingPlaceDate = add.dataset.addPlace;
+      location.hash = 'together';
+    }
+  });
   selectedDay = today();
   renderCalendar();
   loaded.todayReady = true;
@@ -209,6 +226,15 @@ function streak() {
   return n;
 }
 
+function groupByDay() {
+  const places = {};
+  const photos = {};
+  const byId = Object.fromEntries(calPlaces.map((p) => [p.id, p]));
+  for (const p of calPlaces) (places[p.date] ||= []).push(p);
+  for (const ph of calPhotos) (photos[photoDay(ph, byId)] ||= []).push(ph);
+  return { places, photos };
+}
+
 function renderCalendar(stampedDate = null) {
   const y = calMonth.getFullYear();
   const m = calMonth.getMonth();
@@ -216,6 +242,7 @@ function renderCalendar(stampedDate = null) {
   const first = new Date(y, m, 1).getDay();
   const days = new Date(y, m + 1, 0).getDate();
   const t = today();
+  const byDay = groupByDay();
   let html = '';
   for (let i = 0; i < first; i++) html += '<span class="cal-day empty"></span>';
   for (let day = 1; day <= days; day++) {
@@ -223,8 +250,10 @@ function renderCalendar(stampedDate = null) {
     const w = (first + day - 1) % 7;
     const cls = ['cal-day', w === 0 ? 'sun' : '', w === 6 ? 'sat' : '', key === t ? 'today' : '',
       key === selectedDay ? 'selected' : '', key > t ? 'future' : ''].join(' ');
-    const stamp = diary[key] ? pawStampSVG(key === stampedDate ? 'new' : '') + (stamps[key] ? '<span class="cal-praise" aria-hidden="true">💮</span>' : '') : '';
-    html += `<button class="${cls}" data-date="${key}" aria-label="${m + 1}월 ${day}일${diary[key] ? ' 출석' : ''}${stamps[key] ? ', 참 잘했어요' : ''}"><span class="num">${day}</span>${stamp}</button>`;
+    const placeN = byDay.places[key]?.length || 0;
+    const stamp = (diary[key] ? pawStampSVG(key === stampedDate ? 'new' : '') + (stamps[key] ? '<span class="cal-praise" aria-hidden="true">💮</span>' : '') : '')
+      + (placeN || byDay.photos[key] ? `<span class="cal-pin" aria-hidden="true">${placeN ? '📍' : '📷'}</span>` : '');
+    html += `<button class="${cls}" data-date="${key}" aria-label="${m + 1}월 ${day}일${diary[key] ? ' 출석' : ''}${stamps[key] ? ', 참 잘했어요' : ''}${placeN ? `, 다녀온 곳 ${placeN}곳` : ''}"><span class="num">${day}</span>${stamp}</button>`;
   }
   $('#calDays').innerHTML = html;
   // 새로 찍힌 도장만 애니메이션
@@ -232,9 +261,20 @@ function renderCalendar(stampedDate = null) {
 
   const sel = selectedDay && diary[selectedDay];
   const label = selectedDay ? new Date(`${selectedDay}T00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' }) : '';
-  $('#calDetail').innerHTML = sel
+  const dayPlaces = byDay.places[selectedDay] || [];
+  const dayPhotos = byDay.photos[selectedDay] || [];
+  const inPlace = new Set(dayPlaces.map((p) => p.id));
+  const loose = dayPhotos.filter((ph) => !inPlace.has(ph.placeId));
+  const diaryHtml = sel
     ? `<div class="detail-row"><div><span class="date">🐾 ${label}</span><p>${escapeHtml(sel.text)}</p></div>${stamps[selectedDay] ? praiseStampSVG('detail') : ''}</div>`
     : `<span class="date">${label}</span><p class="muted">${selectedDay === t ? '아직 오늘 일기가 없어요. 한 줄 남겨 볼까요?' : '이 날은 일기가 없어요.'}</p>`;
+  const placesHtml = dayPlaces.length
+    ? `<h4 class="day-h">📍 이날 함께 다녀온 곳</h4>${dayPlaces.map((p) => placeCard(p, dayPhotos.filter((ph) => ph.placeId === p.id), { compact: true })).join('')}` : '';
+  const photosHtml = loose.length
+    ? `<h4 class="day-h">📷 이날 사진</h4><div class="pc-photos">${loose.map((ph) => `<button type="button" class="thumb" data-photo="${escapeHtml(ph.id)}" aria-label="사진 크게 보기"><img src="${ph.src}" alt="" loading="lazy" /></button>`).join('')}</div>` : '';
+  const addLink = selectedDay && selectedDay <= t
+    ? `<button type="button" class="add-place" data-add-place="${selectedDay}">＋ 이날 다녀온 곳 남기기</button>` : '';
+  $('#calDetail').innerHTML = `<div class="day-diary">${diaryHtml}</div>${placesHtml}${photosHtml}${addLink}`;
 
   const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}`;
   const monthCount = Object.keys(diary).filter((k) => k.startsWith(monthPrefix)).length;
@@ -246,16 +286,49 @@ function renderCalendar(stampedDate = null) {
 
 /* ---------- 3. 멍뭉이와 함께 ---------- */
 let pending = [];
+let pendingPlaceDate = null;
+
+/* 사진 크게 보기 (갤러리, 장소 카드, 달력 어디서든) */
+const lb = $('#lightbox');
+$('#lbClose').addEventListener('click', () => lb.close());
+lb.addEventListener('click', (e) => { if (e.target === lb) lb.close(); });
+function openPhoto(p) {
+  if (!p) return;
+  $('#lbImg').src = p.src;
+  $('#lbCaption').textContent = p.caption || p.name;
+  $('#lbDownload').onclick = () => downloadPhoto(p);
+  lb.showModal();
+}
+
+function showTogetherView(v) {
+  $('#viewPlaces').hidden = v !== 'places';
+  $('#viewPhotos').hidden = v !== 'photos';
+  document.querySelectorAll('#togetherTabs button').forEach((b) => b.classList.toggle('active', b.dataset.v === v));
+}
+function applyPendingPlaceDate() {
+  if (!pendingPlaceDate) return;
+  showTogetherView('places');
+  $('#placeDate').value = pendingPlaceDate;
+  pendingPlaceDate = null;
+  setTimeout(() => $('#placeName').focus(), 100);
+}
 
 async function initTogether() {
+  $('#togetherTabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) showTogetherView(b.dataset.v);
+  });
+  await initPlaces({ openPhoto, onChange: () => renderGallery() });
+  applyPendingPlaceDate();
+
   const input = $('#fileInput');
   const drop = $('#drop');
   const setFiles = (files) => {
     pending = [...files].filter((f) => f.type.startsWith('image/'));
     $('#uploadBtn').disabled = !pending.length;
     $('#dropText').textContent = pending.length ? `사진 ${pending.length}장 선택됨 · 다시 누르면 바꿀 수 있어요` : '여기를 눌러 사진 고르기 (또는 끌어다 놓기)';
-    let pv = $('.previews');
-    if (!pv) { pv = document.createElement('div'); pv.className = 'previews'; $('.upload-row').before(pv); }
+    let pv = $('#uploadPreviews');
+    if (!pv) { pv = document.createElement('div'); pv.className = 'previews'; pv.id = 'uploadPreviews'; $('.upload-row').before(pv); }
     pv.querySelectorAll('img').forEach((i) => URL.revokeObjectURL(i.src));
     pv.innerHTML = '';
     pending.slice(0, 12).forEach((f) => {
@@ -279,7 +352,7 @@ async function initTogether() {
     let ok = 0;
     for (const [i, f] of pending.entries()) {
       btn.textContent = `올리는 중… ${i + 1}/${pending.length}`;
-      try { await store.uploadPhoto(f, caption); ok++; } catch (err) { showError(err); }
+      try { await store.uploadPhoto(f, caption, { date: $('#photoDate').value }); ok++; } catch (err) { showError(err); }
     }
     btn.textContent = '올리기';
     input.value = '';
@@ -287,11 +360,9 @@ async function initTogether() {
     setFiles([]);
     if (ok) toast(`사진 ${ok}장을 올렸어요 📸`);
     renderGallery();
+    renderPlaces().catch(() => {});
   });
-
-  const lb = $('#lightbox');
-  $('#lbClose').addEventListener('click', () => lb.close());
-  lb.addEventListener('click', (e) => { if (e.target === lb) lb.close(); });
+  $('#photoDate').max = dateKey();
   renderGallery();
 }
 
@@ -309,7 +380,7 @@ async function renderGallery() {
     <figure class="photo" data-i="${i}">
       <img src="${p.src}" alt="${escapeHtml(p.caption || p.name)}" loading="lazy" />
       <figcaption>
-        <span>${escapeHtml(p.caption || '')}<br><span class="date">${new Date(p.uploadedAt).toLocaleDateString('ko-KR')}</span></span>
+        <span>${escapeHtml(p.caption || '')}<br><span class="date">${p.placeId ? '📍 ' : ''}${new Date(`${photoDay(p)}T00:00`).toLocaleDateString('ko-KR')}</span></span>
         <button class="dl" type="button" data-i="${i}" title="다운로드" aria-label="다운로드">⬇️</button>
       </figcaption>
     </figure>`).join('');
@@ -317,12 +388,7 @@ async function renderGallery() {
     const dlBtn = e.target.closest('.dl');
     if (dlBtn) { downloadPhoto(photos[+dlBtn.dataset.i]); return; }
     const f = e.target.closest('.photo');
-    if (!f) return;
-    const p = photos[+f.dataset.i];
-    $('#lbImg').src = p.src;
-    $('#lbCaption').textContent = p.caption || p.name;
-    $('#lbDownload').onclick = () => downloadPhoto(p);
-    $('#lightbox').showModal();
+    if (f) openPhoto(photos[+f.dataset.i]);
   };
 }
 
@@ -336,8 +402,8 @@ async function initGrowth() {
 const fmtDate = (k) => new Date(`${k}T00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
 async function renderGrowth() {
-  const [d, p, pr, st] = await Promise.all([store.getDiary(), store.listPhotos(), store.getProfile(), store.getStamps().catch(() => ({}))]);
-  const g = computeGrowth({ diary: d, photos: p, profile: pr, stamps: st });
+  const [d, p, pr, st, pl] = await Promise.all([store.getDiary(), store.listPhotos(), store.getProfile(), store.getStamps().catch(() => ({})), store.getPlaces().catch(() => [])]);
+  const g = computeGrowth({ diary: d, photos: p, profile: pr, stamps: st, places: pl });
 
   $('#lvBadge').textContent = `Lv.${g.levelIndex + 1} ${g.level.icon} ${g.level.name}`;
   $('#lvNext').textContent = g.next ? `다음: ${g.next.icon} ${g.next.name}` : '최고 단계 달성! 👑';
@@ -390,7 +456,7 @@ async function renderGrowth() {
 
   $('#growStats').innerHTML = `
     <div class="stat"><b>${g.counts.meal}</b><span>🍚 밥</span></div>
-    <div class="stat"><b>${g.counts.snack + g.counts.feast + g.counts.photo + g.counts.praise}</b><span>🍪 간식</span></div>
+    <div class="stat"><b>${g.counts.snack + g.counts.feast + g.counts.photo + g.counts.praise + g.counts.place}</b><span>🍪 간식</span></div>
     <div class="stat"><b>${g.streak}일</b><span>🔥 연속 출석</span></div>`;
 
   $('#growRoad').innerHTML = LEVELS.map((l, i) => `
@@ -402,7 +468,7 @@ async function renderGrowth() {
   $('#feedList').innerHTML = g.feed.length
     ? g.feed.slice(0, 12).map((f) => {
       const r = REWARDS[f.type];
-      const why = { meal: '출석', snack: `${f.run}일 연속 출석`, feast: `${f.run}일 연속 출석`, photo: '사진 올리기', profile: '소개서 완성', praise: '참 잘했어요 도장' }[f.type];
+      const why = { meal: '출석', snack: `${f.run}일 연속 출석`, feast: `${f.run}일 연속 출석`, photo: '사진 올리기', profile: '소개서 완성', praise: '참 잘했어요 도장', place: f.name ? `추억 장소 · ${escapeHtml(f.name)}` : '추억 장소' }[f.type];
       return `<li><span class="fi">${r.icon}</span><span>${r.name} <span class="muted small">· ${why}</span></span><b>+${r.pts}</b><span class="fd">${fmtDate(f.date)}</span></li>`;
     }).join('')
     : '<li class="muted">아직 먹은 게 없어요. 오늘 첫 출석으로 밥을 주세요! 🥣</li>';

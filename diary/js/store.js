@@ -19,7 +19,15 @@ async function sha256(text) {
   return `x${(h >>> 0).toString(16)}`;
 }
 const randomSalt = () => [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, '0')).join('');
-const WIPE_KINDS = ['diary', 'photos', 'stamps', 'profile'];
+const WIPE_KINDS = ['diary', 'photos', 'stamps', 'profile', 'places'];
+// 다녀온 곳 한 개를 깔끔하게 (저장 전에 모든 방식에서 똑같이 정리해요)
+export function cleanPlace(p) {
+  const str = (v, n) => String(v ?? '').trim().slice(0, n);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date || '')) throw fail('날짜를 골라 주세요');
+  if (!str(p.name, 40)) throw fail('장소 이름을 써 주세요');
+  return { date: p.date, name: str(p.name, 40), area: str(p.area, 60), category: str(p.category, 12), memo: str(p.memo, 200) };
+}
+const photoExtra = (x = {}) => ({ ...(x.date ? { date: x.date } : {}), ...(x.placeId ? { placeId: x.placeId } : {}) });
 
 function fail(msg, status) {
   const e = new Error(msg);
@@ -111,7 +119,7 @@ async function cloudBackend() {
         return { ...p, id: d.id, src, downloadUrl: src };
       });
     },
-    uploadPhoto: async (file, caption = '') => {
+    uploadPhoto: async (file, caption = '', extra = {}) => {
       const assets = await assetsP;
       if (!assets) throw fail('사진을 올릴 권한이 없어요. 공유받을 때 “참여자(Contributor)” 이상이어야 해요.', 403);
       const img = await normalizeImage(file);
@@ -123,7 +131,7 @@ async function cloudBackend() {
         throw fail('사진을 올리지 못했어요. 다시 해 주세요.');
       }
       const id = newId();
-      const meta = { assetId: up.id, name: img.name || `photo${extOf(img.type)}`, caption, type: up.contentType, size: up.sizeBytes, uploadedAt: new Date().toISOString() };
+      const meta = { assetId: up.id, name: img.name || `photo${extOf(img.type)}`, caption, type: up.contentType, size: up.sizeBytes, uploadedAt: new Date().toISOString(), ...photoExtra(extra) };
       await wrap(() => db.collection('photos').doc(id).set(meta));
       return { ...meta, id };
     },
@@ -154,6 +162,17 @@ async function cloudBackend() {
       if (!downloads) throw fail('이 화면에서는 파일을 저장할 수 없어요');
       try { await downloads.save({ filename, data }); } catch (e) { if (e?.code !== 'declined') throw fail('저장하지 못했어요'); }
     },
+
+    // 다녀온 곳
+    getPlaces: async () => (await allDocs('places')).map((d) => ({ ...d.data(), id: d.id })).sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || '')),
+    savePlace: async (p) => {
+      const body = cleanPlace(p);
+      const ref = p.id ? db.collection('places').doc(p.id) : db.collection('places').doc(newId());
+      const createdAt = p.createdAt || new Date().toISOString();
+      await wrap(() => ref.set({ ...body, createdAt, updatedAt: new Date().toISOString() }));
+      return { ...body, createdAt, id: ref.id };
+    },
+    deletePlace: async (id) => { await needEditor(); await wrap(() => db.collection('places').doc(id).delete()); },
 
     // 참 잘했어요 도장 (관리자만 찍어요)
     getStamps: async () => Object.fromEntries((await allDocs('stamps')).map((d) => [d.id, d.data()])),
@@ -199,6 +218,7 @@ async function cloudBackend() {
         for (const d of await allDocs(coll)) await wrap(() => db.collection(coll).doc(d.id).delete());
       }
       if (kinds.includes('profile')) await wrap(() => db.doc('app/profile').delete());
+      if (kinds.includes('places')) for (const d of await allDocs('places')) await wrap(() => db.collection('places').doc(d.id).delete());
     },
 
     // 관리자 = claude.ai 에서 이 페이지를 편집할 수 있는 사람 (주인 / 편집자)
@@ -210,12 +230,13 @@ async function cloudBackend() {
     exportAll: async () => {
       await needEditor();
       const stamps = Object.fromEntries((await allDocs('stamps')).map((d) => [d.id, d.data()]));
+      const places = (await allDocs('places')).map((d) => ({ id: d.id, ...d.data() }));
       const [profile, settings, diary, photos] = await Promise.all([
         docData('app/profile', DEFAULT_PROFILE), docData('app/settings', { traitOptions: DEFAULT_TRAITS }),
         (async () => Object.fromEntries((await db.collection('diary').get()).docs.map((d) => [d.id, d.data()])))(),
         (async () => (await db.collection('photos').get()).docs.map((d) => ({ id: d.id, ...d.data() })))(),
       ]);
-      return { profile, traitOptions: settings.traitOptions, diary, stamps, photos };
+      return { profile, traitOptions: settings.traitOptions, diary, stamps, places, photos };
     },
   };
 }
@@ -249,18 +270,22 @@ async function serverBackend() {
     saveDiary: (date, text) => api(`diary/${date}`, { method: 'PUT', body: { text } }),
     deleteDiary: (date) => api(`diary/${date}`, { method: 'DELETE', admin: true }),
     listPhotos: async () => (await api('photos')).map((p) => ({ ...p, src: `${API}/photos/${p.id}/file`, downloadUrl: `${API}/photos/${p.id}/file?download=1` })),
-    uploadPhoto: (file, caption = '') => api('photos', {
+    uploadPhoto: (file, caption = '', extra = {}) => api('photos', {
       method: 'POST',
       body: file,
       headers: {
         'content-type': file.type || 'application/octet-stream',
         'x-file-name': encodeURIComponent(file.name || 'photo.jpg'),
         'x-caption': encodeURIComponent(caption),
+        'x-extra': encodeURIComponent(JSON.stringify(photoExtra(extra))),
       },
     }),
     deletePhoto: (id) => api(`photos/${id}`, { method: 'DELETE', admin: true }),
     downloadPhoto: null, // 일반 다운로드 링크 사용
     saveFile: null,
+    getPlaces: () => api('places'),
+    savePlace: (p) => { const body = cleanPlace(p); return p.id ? api(`places/${p.id}`, { method: 'PUT', body }) : api('places', { method: 'POST', body }); },
+    deletePlace: (id) => api(`places/${id}`, { method: 'DELETE', admin: true }),
     getStamps: () => api('stamps'),
     setStamp: (date, on) => api(`stamps/${date}`, { method: on ? 'PUT' : 'DELETE', admin: true }),
     lockState: (token) => api(`lock?token=${encodeURIComponent(token || '')}`),
@@ -353,8 +378,8 @@ function localBackend() {
         return { ...meta, src, downloadUrl: src };
       });
     },
-    uploadPhoto: async (file, caption = '') => {
-      const meta = { id: newId(), name: file.name || 'photo.jpg', caption, type: file.type, size: file.size, uploadedAt: new Date().toISOString() };
+    uploadPhoto: async (file, caption = '', extra = {}) => {
+      const meta = { id: newId(), name: file.name || 'photo.jpg', caption, type: file.type, size: file.size, uploadedAt: new Date().toISOString(), ...photoExtra(extra) };
       await run('photos', 'readwrite', (s) => s.put({ ...meta, blob: file }));
       return meta;
     },
@@ -366,6 +391,17 @@ function localBackend() {
     },
     downloadPhoto: null,
     saveFile: null,
+    getPlaces: async () => (await kvGet('places', [])).sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || '')),
+    savePlace: async (p) => {
+      const body = cleanPlace(p);
+      const list = await kvGet('places', []);
+      const i = p.id ? list.findIndex((x) => x.id === p.id) : -1;
+      const place = { ...body, id: p.id || newId(), createdAt: (i >= 0 && list[i].createdAt) || new Date().toISOString() };
+      if (i >= 0) list[i] = place; else list.push(place);
+      await kvSet('places', list);
+      return place;
+    },
+    deletePlace: async (id) => { await check(); await kvSet('places', (await kvGet('places', [])).filter((x) => x.id !== id)); },
     getStamps: () => kvGet('stamps', {}),
     setStamp: async (date, on) => {
       await check();
@@ -394,6 +430,7 @@ function localBackend() {
       if (kinds.includes('diary')) await kvSet('diary', {});
       if (kinds.includes('stamps')) await kvSet('stamps', {});
       if (kinds.includes('profile')) await run('kv', 'readwrite', (s) => s.delete('profile'));
+      if (kinds.includes('places')) await kvSet('places', []);
       if (kinds.includes('photos')) {
         await run('photos', 'readwrite', (s) => s.clear());
         urlCache.forEach((u) => URL.revokeObjectURL(u));
@@ -415,6 +452,7 @@ function localBackend() {
         traitOptions: await kvGet('traitOptions', DEFAULT_TRAITS),
         diary: await kvGet('diary', {}),
         stamps: await kvGet('stamps', {}),
+        places: await kvGet('places', []),
         photos: (await run('photos', 'readonly', (s) => s.getAll())).map(({ blob, ...m }) => m),
       };
     },
