@@ -201,7 +201,7 @@ export function workStatus(schedule, now = new Date()) {
 /** 어떤 날짜의 근무가 지금(휴대폰 시간) 기준으로 출근 전 / 출근 중 / 퇴근 / 쉬는 날인지 */
 export function statusAt(date, entry, now = new Date()) {
   if (!entry) return null;
-  if (!entry.start || !entry.end) return /휴무|휴일|쉬는|오프|off|OFF/.test(entry.text || '') ? 'rest' : null;
+  if (!entry.start || !entry.end) return /휴무|휴일|쉬는|오프|off|OFF|연차|휴가/.test(entry.text || '') ? 'rest' : null;
   const s = new Date(`${date}T${entry.start}:00`);
   const f = new Date(`${date}T${entry.end}:00`);
   if (f <= s) f.setDate(f.getDate() + 1); // 밤샘 근무

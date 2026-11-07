@@ -199,6 +199,7 @@ function showReview() {
 export async function refresh() {
   [schedule, admin] = await Promise.all([store.getSchedule().catch(() => ({})), store.isAdmin().catch(() => false)]);
   schedule = fixSchedule(schedule);
+  window.dispatchEvent(new Event('mm-schedule-changed'));
   $('#scUpload').hidden = !admin;
   $('#scNote').hidden = admin;
   render();
@@ -223,7 +224,9 @@ function render() {
     const key = dateKey(new Date(y, m, d));
     const w = (first + d - 1) % 7;
     const s = schedule[key];
-    const cls = ['cal-day', 'sc-day', w === 0 ? 'sun' : '', w === 6 ? 'sat' : '', key === t ? 'today' : '', key === selected ? 'selected' : '', s ? 'has' : ''].join(' ');
+    // 쉬는 날은 빨강, 근무일은 파랑 테두리
+    const kind = !s ? '' : (s.start ? 'sc-work' : (/휴무|휴일|쉬는|오프|off|OFF|연차|휴가/.test(s.text || '') ? 'sc-rest' : ''));
+    const cls = ['cal-day', 'sc-day', w === 0 ? 'sun' : '', w === 6 ? 'sat' : '', key === t ? 'today' : '', key === selected ? 'selected' : '', s ? 'has' : '', kind].join(' ');
     const st = s ? statusAt(key, s) : null;
     const pawState = key === now.date && now.state ? now.state : st;
     const paw = ['working', 'off', 'before'].includes(pawState) ? `<span class="sc-paw ${pawState}" aria-hidden="true">${pawStampSVG()}</span>` : '';

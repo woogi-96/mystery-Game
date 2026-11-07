@@ -1,6 +1,6 @@
 import { store, dateKey, escapeHtml, toast, downloadPhoto, askConfirm } from './store.js';
 import { meongmungImg, meongmungSmall, pawStampSVG, praiseStampSVG, workBadge } from './character.js';
-import { statusAt, fixSchedule } from './schedule.js';
+import { statusAt, fixSchedule, workStatus } from './schedule.js';
 import { gate, isUnlocked, setLockVisible } from './lock.js';
 import { initPlaces, placeCard, photoDay, render as renderPlaces } from './places.js';
 import { GREETINGS, timePhase } from './greeting.js';
@@ -562,5 +562,27 @@ async function renderGrowth() {
     }).join('')
     : '<li class="muted">아직 먹은 게 없어요. 오늘 첫 출석으로 밥을 주세요! 🥣</li>';
 }
+
+/* 화면 위 “우기 🐾 출근 중” : 입장한 뒤 1분마다, 앱으로 돌아올 때마다 다시 확인 */
+async function updateHeaderWork() {
+  const el = $('#hdrWork');
+  if (!isUnlocked() && !(await store.isAdmin().catch(() => false))) { el.hidden = true; return; }
+  const sc = fixSchedule(await store.getSchedule?.().catch(() => ({})) || {});
+  const ws = workStatus(sc);
+  if (!ws.state) { el.hidden = true; return; }
+  el.innerHTML = `<span class="hw-name">우기</span>${workBadge(ws.state)}`;
+  el.hidden = false;
+}
+gate().then(updateHeaderWork).catch(() => {});
+setInterval(() => updateHeaderWork().catch(() => {}), 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') updateHeaderWork().catch(() => {}); });
+let lastHdr = 0;
+window.addEventListener('hashchange', () => {
+  if (Date.now() - lastHdr < 15000) return; // 탭을 자주 바꿔도 15초에 한 번만
+  lastHdr = Date.now();
+  updateHeaderWork().catch(() => {});
+});
+// 스케줄을 저장·수정하면 바로 다시
+window.addEventListener('mm-schedule-changed', () => updateHeaderWork().catch(() => {}));
 
 route();

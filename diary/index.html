@@ -53,6 +53,8 @@
       <img src="assets/meongmung-sm.jpg" alt="" />
       <span>멍뭉일지</span>
     </a>
+    <!-- 지금 우기 근무 상태 (모든 화면 위에, 멍뭉이도 바로 보게) -->
+    <a class="hdr-work" id="hdrWork" href="#schedule" hidden aria-label="우기 스케줄 보기"></a>
   </header>
 
   <div class="readonly-note" id="readonlyNote" hidden>
@@ -277,6 +279,7 @@
           <span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span>
         </div>
         <div class="cal-grid sc-grid" id="scDays"></div>
+        <div class="sc-legend"><span><i class="w"></i>근무일</span><span><i class="r"></i>쉬는 날</span></div>
         <div class="cal-detail sc-detail" id="scDetail"></div>
       </div>
 

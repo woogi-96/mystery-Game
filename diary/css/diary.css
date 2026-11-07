@@ -586,3 +586,28 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .admin-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
 .admin-quick .btn { font-size: .92rem; padding: 10px 8px; }
 .sc-upload .head-row { margin: 0; }
+
+/* 우기 스케줄 달력: 쉬는 날 빨강 / 근무일 파랑 테두리 */
+:root { --work: #3b82f6; --work-soft: #e8f1ff; --rest: #ef4444; --rest-soft: #ffecec; }
+.sc-day.sc-work { border: 2.5px solid var(--work); background: #fff; }
+.sc-day.sc-work .sc-chip { background: var(--work-soft); color: #1d4ed8; }
+.sc-day.sc-rest { border: 2.5px solid var(--rest); background: #fff; }
+.sc-day.sc-rest .sc-chip { background: var(--rest-soft); color: #b91c1c; }
+/* 오늘 · 누른 날짜는 테두리 색을 지키고 바깥 민트 빛으로 */
+.sc-day.today { box-shadow: 0 0 0 3px var(--yellow); }
+.sc-day.selected { box-shadow: 0 0 0 3px var(--mint); }
+.sc-day.sc-work.selected, .sc-day.sc-rest.selected { border-color: inherit; }
+.sc-day.sc-work.selected { border-color: var(--work); }
+.sc-day.sc-rest.selected { border-color: var(--rest); }
+.sc-legend { display: flex; gap: 12px; justify-content: center; margin-top: 10px; font-size: .78rem; color: var(--muted); }
+.sc-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 4px; vertical-align: -1px; background: #fff; }
+.sc-legend .w { border: 2.5px solid var(--work); }
+.sc-legend .r { border: 2.5px solid var(--rest); }
+
+/* 화면 위 우기 근무 상태 */
+.hdr-work { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; margin-left: auto; }
+.hdr-work[hidden] { display: none; }
+.hdr-work .hw-name { font-family: 'Jua', sans-serif; color: var(--brown); font-size: .95rem; }
+.hdr-work .work-badge { font-size: .85rem; padding: 3px 10px 3px 5px; }
+.hdr-work .work-badge .paw-stamp { width: 20px; height: 20px; }
+body.admin-mode .hdr-work { display: none; }
