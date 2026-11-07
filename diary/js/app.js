@@ -1,6 +1,6 @@
 import { store, dateKey, escapeHtml, toast, downloadPhoto } from './store.js';
 import { meongmungImg, meongmungSmall, pawStampSVG, praiseStampSVG } from './character.js';
-import { gate, isUnlocked } from './lock.js';
+import { gate, isUnlocked, setLockVisible } from './lock.js';
 import { initPlaces, placeCard, photoDay, render as renderPlaces } from './places.js';
 import { GREETINGS, timePhase } from './greeting.js';
 import { computeGrowth, LEVELS, REWARDS, TIPS } from './growth.js';
@@ -13,6 +13,7 @@ const loaded = {};
 function route() {
   const page = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'intro';
   // 관리자 화면은 claude.ai 권한(또는 관리자 비밀번호)으로 따로 지켜요. 나머지는 입장 비밀번호 먼저
+  setLockVisible(page !== 'admin');
   if (page !== 'admin' && !isUnlocked()) {
     PAGES.forEach((p) => { $(`#page-${p}`).hidden = true; });
     gate().then(route).catch(showError);

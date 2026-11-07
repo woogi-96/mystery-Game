@@ -11,6 +11,14 @@ const remembered = () => { try { return localStorage.getItem(KEY) || ''; } catch
 const remember = (t) => { try { localStorage.setItem(KEY, t); } catch { /* 기억 못 하면 다음에 다시 물어봐요 */ } };
 
 let gatePromise = null;
+let showing = false; // 잠금 화면이 떠 있는 중인지
+
+/** 관리자 화면으로 갈 때는 잠금 화면을 잠깐 치우고, 돌아오면 다시 보여 줘요 */
+export function setLockVisible(v) {
+  if (!showing) return;
+  $('#lock').hidden = !v;
+  document.body.classList.toggle('locked', v);
+}
 export const isUnlocked = () => unlocked;
 let unlocked = false;
 
@@ -53,6 +61,7 @@ async function run() {
       else say('다시 만나서 반가워요!', '이 기기에서는 처음이에요. 정해 둔 비밀번호 4자리를 눌러 주세요.');
     };
     const open = (token) => {
+      showing = false;
       if (token) remember(token);
       lock.classList.add('out');
       document.body.classList.remove('locked');
@@ -106,6 +115,7 @@ async function run() {
       if (pin.length === 4) setTimeout(complete, 120);
     }
     function onKey(e) {
+      if (lock.hidden) return;
       if (/^\d$/.test(e.key)) press(e.key);
       else if (e.key === 'Backspace') press('del');
     }
@@ -121,7 +131,9 @@ async function run() {
     document.addEventListener('keydown', onKey);
 
     screen();
-    document.body.classList.add('locked');
-    lock.hidden = false;
+    showing = true;
+    const onAdmin = location.hash === '#admin';
+    document.body.classList.toggle('locked', !onAdmin);
+    lock.hidden = onAdmin;
   });
 }
