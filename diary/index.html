@@ -259,6 +259,63 @@
         <ul class="tip-list" id="tipList"></ul>
       </div>
     </section>
+    <!-- 5. 우기 스케줄 -->
+    <section class="page" id="page-schedule" hidden>
+      <div class="card sched-head">
+        <h2>🗓️ 우기 스케줄</h2>
+        <p class="muted small">우기가 올린 스케줄이에요. 날짜를 누르면 그날 스케줄이 보여요.</p>
+      </div>
+
+      <div class="card calendar">
+        <div class="cal-head">
+          <button class="icon-btn" id="scPrev" aria-label="이전 달">‹</button>
+          <h3 id="scTitle"></h3>
+          <button class="icon-btn" id="scNext" aria-label="다음 달">›</button>
+        </div>
+        <div class="cal-grid cal-week">
+          <span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span>
+        </div>
+        <div class="cal-grid sc-grid" id="scDays"></div>
+        <div class="cal-detail sc-detail" id="scDetail"></div>
+      </div>
+
+      <!-- 우기(관리자로 로그인한 기기)에게만 보여요 -->
+      <div class="card sc-upload" id="scUpload" hidden>
+        <h3>📷 스케줄 캡처 올리기</h3>
+        <p class="muted small">근무표나 캘린더 캡처를 올리면 글자를 읽어서 날짜별로 채워 줘요. 저장하기 전에 확인하고 고칠 수 있어요.</p>
+        <label class="drop small">
+          <input type="file" id="scFile" accept="image/*" />
+          <span class="drop-icon">＋</span>
+          <span id="scFileText">스케줄 캡처 고르기</span>
+        </label>
+        <div class="sc-progress" id="scProgress" hidden>
+          <div class="sc-bar"><i id="scBar"></i></div>
+          <span class="muted small" id="scProgressText"></span>
+        </div>
+        <div class="sc-review" id="scReview" hidden>
+          <div class="sc-review-head">
+            <label>몇 월 스케줄인가요? <input type="month" id="scMonth" /></label>
+            <span class="muted small" id="scFound"></span>
+          </div>
+          <img class="sc-preview" id="scPreview" alt="올린 스케줄 캡처" />
+          <ul class="sc-rows" id="scRows"></ul>
+          <div class="btn-row">
+            <button class="btn sm" id="scAddRow" type="button">＋ 줄 추가</button>
+          </div>
+          <button class="btn primary block" id="scSave" type="button">🗓️ 달력에 저장</button>
+        </div>
+        <details class="sc-manual">
+          <summary>캡처 없이 직접 입력하기</summary>
+          <form class="stack" id="scManual">
+            <input type="date" id="scManualDate" required />
+            <input id="scManualText" maxlength="200" placeholder="예) 오픈 09:00-18:00" required />
+            <button class="btn" type="submit">저장</button>
+          </form>
+        </details>
+      </div>
+      <p class="muted small sc-note" id="scNote" hidden>스케줄은 우기가 관리자로 로그인한 기기에서 올릴 수 있어요.</p>
+    </section>
+
     <!-- 관리자 (하단 탭에는 없고, 맨 아래 "관리자" 링크로 들어와요) -->
     <section class="page" id="page-admin" hidden>
 
@@ -343,10 +400,11 @@
           <li><div class="body"><b>한 줄 일기</b><span class="meta">모든 일기와 출석 기록</span></div><div class="actions"><button class="btn danger sm" data-wipe="diary,stamps" type="button">삭제</button></div></li>
           <li><div class="body"><b>참 잘했어요 도장</b><span class="meta">찍어 준 도장만 (일기는 그대로)</span></div><div class="actions"><button class="btn danger sm" data-wipe="stamps" type="button">삭제</button></div></li>
           <li><div class="body"><b>다녀온 곳</b><span class="meta">추억 장소 기록 전부 (사진은 그대로)</span></div><div class="actions"><button class="btn danger sm" data-wipe="places" type="button">삭제</button></div></li>
+          <li><div class="body"><b>우기 스케줄</b><span class="meta">달력에 넣은 스케줄 전부</span></div><div class="actions"><button class="btn danger sm" data-wipe="schedule" type="button">삭제</button></div></li>
           <li><div class="body"><b>사진</b><span class="meta">올린 사진 전부</span></div><div class="actions"><button class="btn danger sm" data-wipe="photos" type="button">삭제</button></div></li>
           <li><div class="body"><b>멍뭉이 소개서</b><span class="meta">처음 상태로 되돌려요</span></div><div class="actions"><button class="btn danger sm" data-wipe="profile" type="button">초기화</button></div></li>
         </ul>
-        <button class="btn danger block" data-wipe="diary,stamps,photos,profile,places" type="button" style="margin-top:14px">⚠️ 모든 데이터 한 번에 삭제</button>
+        <button class="btn danger block" data-wipe="diary,stamps,photos,profile,places,schedule" type="button" style="margin-top:14px">⚠️ 모든 데이터 한 번에 삭제</button>
         <div class="pin-admin" id="pinAdmin">
           <h3>입장 비밀번호</h3>
           <p class="muted small" id="pinAdminText"></p>
@@ -372,6 +430,7 @@
       <a href="#today" data-tab="today"><span class="ic">📒</span> 오늘의 멍뭉</a>
       <a href="#together" data-tab="together"><span class="ic">📸</span> 멍뭉이와 함께</a>
       <a href="#growth" data-tab="growth"><span class="ic">🌱</span> 멍뭉 성장</a>
+      <a href="#schedule" data-tab="schedule"><span class="ic">🗓️</span> 우기 스케줄</a>
   </nav>
 
   <footer class="site-footer">

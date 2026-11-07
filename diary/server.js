@@ -32,6 +32,7 @@ db.diary ??= {};
 db.photos ??= [];
 db.stamps ??= {};
 db.places ??= [];
+db.schedule ??= {};
 db.lock ??= null; // { salt, hash } 입장 비밀번호
 db.adminPassword ??= process.env.ADMIN_PASSWORD || 'meongmung';
 if (process.env.ADMIN_PASSWORD && process.env.RESET_PASSWORD === '1') db.adminPassword = process.env.ADMIN_PASSWORD;
@@ -231,6 +232,40 @@ async function handleApi(req, res, parts) {
     }
   }
 
+  if (resource === 'schedule') {
+    if (m === 'GET' && !id) return send(res, 200, db.schedule);
+    requireAdmin(req);
+    checkDate(id);
+    if (m === 'PUT') {
+      const { text, img } = await readJson(req);
+      if (!str(text, 200)) throw new HttpError(400, '스케줄 내용을 써 주세요');
+      db.schedule[id] = { text: str(text, 200), img: /^[\w.-]+$/.test(img || '') ? img : null, at: new Date().toISOString() };
+    } else if (m === 'DELETE') delete db.schedule[id];
+    else throw new HttpError(405, '허용되지 않는 요청이에요');
+    await save();
+    return send(res, 200, { ok: true });
+  }
+
+  if (resource === 'schedule-image') {
+    if (m === 'POST' && !id) {
+      requireAdmin(req);
+      const type = String(req.headers['content-type'] || '').split(';')[0].trim();
+      if (!type.startsWith('image/')) throw new HttpError(400, '사진 파일만 올릴 수 있어요');
+      const buf = await readBody(req, MAX_PHOTO);
+      const name = `schedule-${newId()}${EXT[type] || '.jpg'}`;
+      await fsp.writeFile(path.join(UPLOADS, name), buf);
+      return send(res, 201, { img: name });
+    }
+    if (m === 'GET' && id && /^schedule-[\w-]+\.\w+$/.test(id)) {
+      const fp = path.join(UPLOADS, id);
+      let st;
+      try { st = await fsp.stat(fp); } catch { throw new HttpError(404, '사진이 없어요'); }
+      res.writeHead(200, { 'content-type': MIME[path.extname(fp)] || 'image/jpeg', 'content-length': st.size });
+      fs.createReadStream(fp).pipe(res);
+      return;
+    }
+  }
+
   if (resource === 'stamps') {
     if (m === 'GET' && !id) return send(res, 200, db.stamps);
     requireAdmin(req);
@@ -282,6 +317,7 @@ async function handleApi(req, res, parts) {
       if (kinds.includes('diary')) db.diary = {};
       if (kinds.includes('stamps')) db.stamps = {};
       if (kinds.includes('places')) db.places = [];
+      if (kinds.includes('schedule')) db.schedule = {};
       if (kinds.includes('profile')) db.profile = structuredClone(DEFAULT_PROFILE);
       if (kinds.includes('photos')) {
         for (const p of db.photos) await fsp.rm(path.join(UPLOADS, p.file), { force: true });

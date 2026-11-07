@@ -137,7 +137,7 @@ end $$;
 -- ---------- 데이터 ----------
 create or replace function public.mm_allowed(p_coll text) returns boolean
 language sql immutable as $$
-  select p_coll in ('app', 'diary', 'stamps', 'places', 'photos')
+  select p_coll in ('app', 'diary', 'stamps', 'places', 'photos', 'schedule')
 $$;
 
 create or replace function public.mm_list(p_token text, p_coll text) returns jsonb
@@ -162,8 +162,8 @@ begin
     raise exception 'mm_bad_path' using errcode = '22023';
   end if;
   if length(p_data::text) > 20000 then raise exception 'mm_too_big' using errcode = '22023'; end if;
-  -- 도장, 특징 목록은 관리자만
-  perform mm_need(p_token, p_coll = 'stamps' or (p_coll = 'app' and p_id = 'settings'));
+  -- 도장, 우기 스케줄, 특징 목록은 관리자만
+  perform mm_need(p_token, p_coll in ('stamps', 'schedule') or (p_coll = 'app' and p_id = 'settings'));
   if p_coll = 'app' and p_id not in ('profile', 'settings') then raise exception 'mm_bad_path' using errcode = '22023'; end if;
   insert into mm_docs(coll, id, data) values (p_coll, p_id, p_data)
     on conflict (coll, id) do update set data = excluded.data, updated_at = now();

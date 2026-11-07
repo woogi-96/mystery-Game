@@ -502,3 +502,41 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .photo .del:active { background: #ffe1e1; }
 .lb-actions { display: flex; gap: 8px; flex: none; }
 .lb-foot { flex-wrap: wrap; }
+
+/* ---------- 🗓️ 우기 스케줄 ---------- */
+.tabs { grid-template-columns: repeat(5, 1fr); }
+.tabs a { font-size: .72rem; letter-spacing: -.02em; }
+.sched-head h2 { margin-bottom: 2px; }
+.sched-head p { margin: 0; }
+.sc-grid .sc-day { aspect-ratio: auto; min-height: 58px; justify-content: flex-start; gap: 2px; }
+.sc-day .sc-chip {
+  display: block; width: 100%; font-size: .62rem; line-height: 1.25; padding: 2px 3px; border-radius: 6px;
+  background: var(--pink-soft); color: #c23e62; font-weight: 700; word-break: break-all;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.sc-day.has { background: #fff; border-color: #ffd3de; }
+.sc-day.has.selected { border-color: var(--mint); }
+.sc-detail .sc-text { font-size: 1.1rem; font-weight: 700; margin: 4px 0 10px; word-break: keep-all; }
+.sc-upload { display: grid; gap: 10px; }
+.sc-upload h3, .sc-upload p { margin: 0; }
+.sc-progress { display: grid; gap: 6px; }
+.sc-bar { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.sc-bar i { display: block; height: 100%; width: 0; background: var(--mint); transition: width .3s; }
+.sc-review { display: grid; gap: 10px; }
+.sc-review-head { display: grid; gap: 4px; }
+.sc-preview { width: 100%; max-height: 240px; object-fit: contain; border-radius: 12px; background: #faf5ea; }
+.sc-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sc-rows li { display: grid; grid-template-columns: 9.5em 1fr auto; gap: 6px; align-items: center; }
+.sc-rows li > * { min-width: 0; }
+.sc-rows input { padding: 8px 10px; font-size: 15px; min-height: 42px; }
+.sc-rows .icon-btn { width: 34px; height: 34px; font-size: .9rem; }
+.sc-manual summary { cursor: pointer; color: var(--muted); font-size: .88rem; }
+.sc-manual form { margin-top: 8px; }
+.sc-note { text-align: center; margin: 0 0 18px; }
+.day-sched { display: flex; gap: 8px; align-items: baseline; margin-top: 10px; padding: 8px 12px; border-radius: 12px; background: #fff; border: 2px solid #ffd3de; }
+.day-sched span { flex: none; font-size: .8rem; color: #c23e62; font-family: 'Jua', sans-serif; }
+.day-sched b { word-break: keep-all; }
+@media (max-width: 380px) { .sc-rows li { grid-template-columns: 1fr auto; } .sc-rows li input[type=date] { grid-column: 1 / -1; } }
+/* 오늘의 멍뭉 달력: 스케줄이 있는 날은 작은 분홍 점, 앞날이어도 눌러서 볼 수 있어요 */
+.cal-day.has-sched::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--pink); }
+.cal-day.future.has-sched { opacity: .85; cursor: pointer; }

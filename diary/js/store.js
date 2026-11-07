@@ -21,7 +21,7 @@ async function sha256(text) {
   return `x${(h >>> 0).toString(16)}`;
 }
 const randomSalt = () => [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, '0')).join('');
-const WIPE_KINDS = ['diary', 'photos', 'stamps', 'profile', 'places'];
+const WIPE_KINDS = ['diary', 'photos', 'stamps', 'profile', 'places', 'schedule'];
 // 다녀온 곳 한 개를 깔끔하게 (저장 전에 모든 방식에서 똑같이 정리해요)
 export function cleanPlace(p) {
   const str = (v, n) => String(v ?? '').trim().slice(0, n);
@@ -188,6 +188,21 @@ async function cloudBackend() {
     deletePlace: async (id) => { await needEditor(); await wrap(() => db.collection('places').doc(id).delete()); },
 
     // 참 잘했어요 도장 (관리자만 찍어요)
+    // 🗓️ 우기 스케줄 (올리기·고치기는 주인만)
+    getSchedule: async () => Object.fromEntries((await allDocs('schedule')).map((d) => {
+      const v = d.data();
+      return [d.id, { ...v, imgUrl: v.img ? `/_blob/${v.img}` : null }];
+    })),
+    saveScheduleDays: async (entries, imageFile) => {
+      await needEditor();
+      let img = null;
+      if (imageFile) {
+        const assets = await assetsP;
+        if (assets) img = (await assets.upload(await normalizeImage(imageFile), { type: 'image/jpeg' }).catch(() => null))?.id || null;
+      }
+      for (const e of entries) await wrap(() => db.collection('schedule').doc(e.date).set({ text: e.text, img, at: new Date().toISOString() }));
+    },
+    deleteScheduleDay: async (date) => { await needEditor(); await wrap(() => db.collection('schedule').doc(date).delete()); },
     getStamps: async () => Object.fromEntries((await allDocs('stamps')).map((d) => [d.id, d.data()])),
     setStamp: async (date, on) => {
       await needEditor();
@@ -227,7 +242,7 @@ async function cloudBackend() {
           await wrap(() => db.collection('photos').doc(d.id).delete());
         }
       }
-      for (const coll of ['diary', 'stamps'].filter((k) => kinds.includes(k))) {
+      for (const coll of ['diary', 'stamps', 'schedule'].filter((k) => kinds.includes(k))) {
         for (const d of await allDocs(coll)) await wrap(() => db.collection(coll).doc(d.id).delete());
       }
       if (kinds.includes('profile')) await wrap(() => db.doc('app/profile').delete());
@@ -349,6 +364,21 @@ function supaBackend() {
     },
     deletePlace: (id) => del('places', id),
 
+    // 🗓️ 우기 스케줄 (올리기·고치기는 관리자만, 보기는 누구나)
+    getSchedule: async () => Object.fromEntries((await list('schedule')).map((d) => [d.id, { ...d.data, imgUrl: d.data.img ? fileUrl(d.data.img) : null }])),
+    saveScheduleDays: async (entries, imageFile) => {
+      let img = null;
+      if (imageFile) {
+        const pic = await normalizeImage(imageFile);
+        const name = `schedule-${crypto.randomUUID ? crypto.randomUUID() : randomSalt() + randomSalt()}${extOf(pic.type)}`;
+        const r = await fetch(`${base}/storage/v1/object/${BUCKET}/${name}`, {
+          method: 'POST', headers: { ...headers, 'content-type': pic.type, 'x-upsert': 'false' }, body: pic,
+        }).catch(() => null);
+        if (r?.ok) img = name;
+      }
+      for (const e of entries) await put('schedule', e.date, { text: e.text, img, at: new Date().toISOString() });
+    },
+    deleteScheduleDay: (date) => del('schedule', date),
     getStamps: async () => Object.fromEntries((await list('stamps')).map((d) => [d.id, d.data])),
     setStamp: (date, on) => (on ? put('stamps', date, { at: new Date().toISOString() }) : del('stamps', date)),
 
@@ -443,6 +473,15 @@ async function serverBackend() {
     getPlaces: () => api('places'),
     savePlace: (p) => { const body = cleanPlace(p); return p.id ? api(`places/${p.id}`, { method: 'PUT', body }) : api('places', { method: 'POST', body }); },
     deletePlace: (id) => api(`places/${id}`, { method: 'DELETE', admin: true }),
+    getSchedule: async () => Object.fromEntries(Object.entries(await api('schedule')).map(([k, v]) => [k, { ...v, imgUrl: v.img ? `${API}/schedule-image/${v.img}` : null }])),
+    saveScheduleDays: async (entries, imageFile) => {
+      let img = null;
+      if (imageFile) {
+        img = (await api('schedule-image', { method: 'POST', body: imageFile, headers: { 'content-type': imageFile.type || 'image/jpeg' }, admin: true }).catch(() => ({}))).img || null;
+      }
+      for (const e of entries) await api(`schedule/${e.date}`, { method: 'PUT', body: { text: e.text, img }, admin: true });
+    },
+    deleteScheduleDay: (date) => api(`schedule/${date}`, { method: 'DELETE', admin: true }),
     getStamps: () => api('stamps'),
     setStamp: (date, on) => api(`stamps/${date}`, { method: on ? 'PUT' : 'DELETE', admin: true }),
     lockState: (token) => api(`lock?token=${encodeURIComponent(token || '')}`),
@@ -563,6 +602,33 @@ function localBackend() {
       return place;
     },
     deletePlace: async (id) => { await check(); await kvSet('places', (await kvGet('places', [])).filter((x) => x.id !== id)); },
+    getSchedule: async () => {
+      const sc = await kvGet('schedule', {});
+      const out = {};
+      for (const [k, v] of Object.entries(sc)) {
+        let imgUrl = null;
+        if (v.img) {
+          if (!urlCache.has(v.img)) { const blob = await kvGet(`schedImg:${v.img}`, null); if (blob) urlCache.set(v.img, URL.createObjectURL(blob)); }
+          imgUrl = urlCache.get(v.img) || null;
+        }
+        out[k] = { ...v, imgUrl };
+      }
+      return out;
+    },
+    saveScheduleDays: async (entries, imageFile) => {
+      await check();
+      let img = null;
+      if (imageFile) { img = newId(); await kvSet(`schedImg:${img}`, imageFile); }
+      const sc = await kvGet('schedule', {});
+      for (const e of entries) sc[e.date] = { text: e.text, img, at: new Date().toISOString() };
+      await kvSet('schedule', sc);
+    },
+    deleteScheduleDay: async (date) => {
+      await check();
+      const sc = await kvGet('schedule', {});
+      delete sc[date];
+      await kvSet('schedule', sc);
+    },
     getStamps: () => kvGet('stamps', {}),
     setStamp: async (date, on) => {
       await check();
@@ -592,6 +658,7 @@ function localBackend() {
       if (kinds.includes('stamps')) await kvSet('stamps', {});
       if (kinds.includes('profile')) await run('kv', 'readwrite', (s) => s.delete('profile'));
       if (kinds.includes('places')) await kvSet('places', []);
+      if (kinds.includes('schedule')) await kvSet('schedule', {});
       if (kinds.includes('photos')) {
         await run('photos', 'readwrite', (s) => s.clear());
         urlCache.forEach((u) => URL.revokeObjectURL(u));

@@ -6,7 +6,7 @@ import { GREETINGS, timePhase } from './greeting.js';
 import { computeGrowth, LEVELS, REWARDS, TIPS } from './growth.js';
 
 const $ = (s, el = document) => el.querySelector(s);
-const PAGES = ['intro', 'today', 'together', 'growth', 'admin'];
+const PAGES = ['intro', 'today', 'together', 'growth', 'schedule', 'admin'];
 const loaded = {};
 
 /* ---------- 라우팅 ---------- */
@@ -24,12 +24,13 @@ function route() {
   document.querySelectorAll('.tabs a').forEach((a) => a.classList.toggle('active', a.dataset.tab === page));
   if (!loaded[page]) {
     loaded[page] = true;
-    ({ intro: initIntro, today: initToday, together: initTogether, growth: initGrowth, admin: initAdmin })[page]().catch(showError);
+    ({ intro: initIntro, today: initToday, together: initTogether, growth: initGrowth, schedule: initSchedulePage, admin: initAdmin })[page]().catch(showError);
   }
   if (page === 'growth' && loaded.growthReady) {
     renderGrowth().catch(showError);
   }
   if (page === 'admin' && adminMod) adminMod.refresh();
+  if (page === 'schedule' && scheduleMod && loaded.scheduleReady) scheduleMod.refresh().catch(showError);
   if (page === 'together' && loaded.together) applyPendingPlaceDate();
   if (page === 'today' && loaded.todayReady) {
     loadToday().then(() => { fillTodayForm(); renderCalendar(); }).catch(showError);
@@ -67,6 +68,13 @@ store.canWrite?.().then((ok) => { if (ok === false) $('#readonlyNote').hidden = 
     try { localStorage.setItem('mm-install-tip', 'no'); } catch { /* 무시 */ }
   };
 })();
+
+let scheduleMod = null;
+async function initSchedulePage() {
+  scheduleMod = await import('./schedule-page.js');
+  await scheduleMod.initSchedule({ openImage: (src, caption) => openPhoto({ src, caption, name: 'schedule.jpg', downloadUrl: src }, { readonly: true }) });
+  loaded.scheduleReady = true;
+}
 
 let adminMod = null;
 async function initAdmin() {
@@ -173,9 +181,11 @@ let selectedDay = null;
 let stamps = {};
 let calPlaces = [];
 let calPhotos = [];
+let calSchedule = {};
 async function loadToday() {
-  [diary, stamps, calPlaces, calPhotos] = await Promise.all([
+  [diary, stamps, calPlaces, calPhotos, calSchedule] = await Promise.all([
     store.getDiary(), store.getStamps().catch(() => ({})), store.getPlaces().catch(() => []), store.listPhotos().catch(() => []),
+    store.getSchedule?.().catch(() => ({})) ?? {},
   ]);
 }
 async function initToday() {
@@ -208,7 +218,7 @@ async function initToday() {
   $('#calNext').addEventListener('click', () => { calMonth.setMonth(calMonth.getMonth() + 1); renderCalendar(); });
   $('#calDays').addEventListener('click', (e) => {
     const b = e.target.closest('.cal-day[data-date]');
-    if (!b || b.classList.contains('future')) return;
+    if (!b || (b.classList.contains('future') && !calSchedule[b.dataset.date])) return;
     selectedDay = b.dataset.date;
     renderCalendar();
   });
@@ -267,7 +277,7 @@ function renderCalendar(stampedDate = null) {
     const key = dateKey(new Date(y, m, day));
     const w = (first + day - 1) % 7;
     const cls = ['cal-day', w === 0 ? 'sun' : '', w === 6 ? 'sat' : '', key === t ? 'today' : '',
-      key === selectedDay ? 'selected' : '', key > t ? 'future' : ''].join(' ');
+      key === selectedDay ? 'selected' : '', key > t ? 'future' : '', calSchedule[key] ? 'has-sched' : ''].join(' ');
     const placeN = byDay.places[key]?.length || 0;
     const stamp = (diary[key] ? pawStampSVG(key === stampedDate ? 'new' : '') + (stamps[key] ? '<span class="cal-praise" aria-hidden="true">💮</span>' : '') : '')
       + (placeN || byDay.photos[key] ? `<span class="cal-pin" aria-hidden="true">${placeN ? '📍' : '📷'}</span>` : '');
@@ -292,7 +302,9 @@ function renderCalendar(stampedDate = null) {
     ? `<h4 class="day-h">📷 이날 사진</h4><div class="pc-photos">${loose.map((ph) => `<button type="button" class="thumb" data-photo="${escapeHtml(ph.id)}" aria-label="사진 크게 보기"><img src="${ph.src}" alt="" loading="lazy" /></button>`).join('')}</div>` : '';
   const addLink = selectedDay && selectedDay <= t
     ? `<button type="button" class="add-place" data-add-place="${selectedDay}">＋ 이날 다녀온 곳 남기기</button>` : '';
-  $('#calDetail').innerHTML = `<div class="day-diary">${diaryHtml}</div>${placesHtml}${photosHtml}${addLink}`;
+  const sch = calSchedule[selectedDay];
+  const schHtml = sch ? `<div class="day-sched"><span>🗓️ 우기 스케줄</span><b>${escapeHtml(sch.text)}</b></div>` : '';
+  $('#calDetail').innerHTML = `<div class="day-diary">${diaryHtml}</div>${schHtml}${placesHtml}${photosHtml}${addLink}`;
 
   const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}`;
   const monthCount = Object.keys(diary).filter((k) => k.startsWith(monthPrefix)).length;
@@ -310,11 +322,12 @@ let pendingPlaceDate = null;
 const lb = $('#lightbox');
 $('#lbClose').addEventListener('click', () => lb.close());
 lb.addEventListener('click', (e) => { if (e.target === lb) lb.close(); });
-function openPhoto(p) {
+function openPhoto(p, { readonly = false } = {}) {
   if (!p) return;
   $('#lbImg').src = p.src;
   $('#lbCaption').textContent = p.caption || p.name;
   $('#lbDownload').onclick = () => downloadPhoto(p);
+  $('#lbDelete').hidden = readonly;
   $('#lbDelete').onclick = () => removePhoto(p);
   lb.showModal();
 }

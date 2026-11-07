@@ -177,14 +177,14 @@ export function init() {
   });
 
   // 데이터 삭제 (관리자만)
-  const WIPE_LABEL = { diary: '한 줄 일기', stamps: '참 잘했어요 도장', photos: '사진', profile: '멍뭉이 소개서', places: '다녀온 곳' };
+  const WIPE_LABEL = { diary: '한 줄 일기', stamps: '참 잘했어요 도장', photos: '사진', profile: '멍뭉이 소개서', places: '다녀온 곳', schedule: '우기 스케줄' };
   $('[data-panel="data"]').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-wipe]');
     if (!b) return;
     const kinds = b.dataset.wipe.split(',');
-    const what = kinds.length >= 5 ? '모든 데이터(일기, 도장, 사진, 소개서, 다녀온 곳)' : kinds.filter((k) => !(k === 'stamps' && kinds.includes('diary'))).map((k) => WIPE_LABEL[k]).join(', ');
+    const what = kinds.length >= 6 ? '모든 데이터(일기, 도장, 사진, 소개서, 다녀온 곳, 스케줄)' : kinds.filter((k) => !(k === 'stamps' && kinds.includes('diary'))).map((k) => WIPE_LABEL[k]).join(', ');
     if (!(await askConfirm(`${what}를 모두 삭제할까요? 되돌릴 수 없어요.`, '삭제하기'))) return;
-    if (kinds.length >= 5 && !(await askConfirm('정말 전부 지울까요? 마지막으로 한 번 더 확인해요.', '전부 삭제'))) return;
+    if (kinds.length >= 6 && !(await askConfirm('정말 전부 지울까요? 마지막으로 한 번 더 확인해요.', '전부 삭제'))) return;
     b.disabled = true;
     try {
       await store.wipe(kinds);
