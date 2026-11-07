@@ -1,5 +1,6 @@
 // 📍 함께 다녀온 곳: 날짜 · 장소 이름 · 동네/주소 · 종류 · 한 줄 추억 · 그날 사진
 import { store, dateKey, escapeHtml, toast } from './store.js';
+import { ensureOwner } from './owner.js';
 
 export const CATEGORIES = [
   { id: 'cafe', icon: '☕', name: '카페' },
@@ -94,7 +95,7 @@ export async function initPlaces(o) {
       let ok = 0;
       for (const [i, f] of pendingFiles.entries()) {
         btn.textContent = `사진 올리는 중… ${i + 1}/${pendingFiles.length}`;
-        try { await store.uploadPhoto(f, saved.name, { date: saved.date, placeId: saved.id }); ok++; } catch (err) { toast(err.message, 'err'); }
+        try { await store.uploadPhoto(f, saved.name, { date: saved.date, placeId: saved.id, by: await ensureOwner() }); ok++; } catch (err) { toast(err.message, 'err'); }
       }
       toast(editing ? '추억 장소를 고쳤어요 ✏️' : `📍 ${saved.name}을(를) 추억 지도에 남겼어요${ok ? ` (사진 ${ok}장)` : ''}`);
       resetForm(setFiles);

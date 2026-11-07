@@ -29,7 +29,11 @@ export function cleanPlace(p) {
   if (!str(p.name, 40)) throw fail('장소 이름을 써 주세요');
   return { date: p.date, name: str(p.name, 40), area: str(p.area, 60), category: str(p.category, 12), memo: str(p.memo, 200) };
 }
-const photoExtra = (x = {}) => ({ ...(x.date ? { date: x.date } : {}), ...(x.placeId ? { placeId: x.placeId } : {}) });
+const photoExtra = (x = {}) => ({
+  ...(x.date ? { date: x.date } : {}),
+  ...(x.placeId ? { placeId: x.placeId } : {}),
+  ...(x.by ? { by: x.by } : {}), // 올린 사람: meongmung | woogi
+});
 
 function fail(msg, status) {
   const e = new Error(msg);
@@ -147,6 +151,15 @@ async function cloudBackend() {
       const meta = { assetId: up.id, name: img.name || `photo${extOf(img.type)}`, caption, type: up.contentType, size: up.sizeBytes, uploadedAt: new Date().toISOString(), ...photoExtra(extra) };
       await wrap(() => db.collection('photos').doc(id).set(meta));
       return { ...meta, id };
+    },
+    // 사진 정보 고치기 (댓글 등): 지금 저장된 걸 읽어서 fn 으로 바꾼 뒤 저장
+    updatePhoto: async (id, fn) => {
+      const ref = db.collection('photos').doc(id);
+      const snap = await wrap(() => ref.get());
+      if (!snap.exists) throw fail('사진을 찾을 수 없어요');
+      const next = fn(structuredClone(snap.data()));
+      await wrap(() => ref.set(next));
+      return next;
     },
     deletePhoto: async (id) => {
       // 사진은 함께 쓰는 사람 누구나 지울 수 있어요
@@ -346,6 +359,13 @@ function supaBackend() {
       try { await put('photos', id, meta); } catch (e) { removeFile(name); throw e; }
       return { ...meta, id };
     },
+    updatePhoto: async (id, fn) => {
+      const cur = await get('photos', id);
+      if (!cur) throw fail('사진을 찾을 수 없어요');
+      const next = fn(structuredClone(cur));
+      await put('photos', id, next);
+      return next;
+    },
     deletePhoto: async (id) => {
       const p = await get('photos', id);
       await del('photos', id);
@@ -467,6 +487,12 @@ async function serverBackend() {
         'x-extra': encodeURIComponent(JSON.stringify(photoExtra(extra))),
       },
     }),
+    updatePhoto: async (id, fn) => {
+      const cur = (await api('photos')).find((p) => p.id === id);
+      if (!cur) throw fail('사진을 찾을 수 없어요');
+      const next = fn(structuredClone(cur));
+      return api(`photos/${id}`, { method: 'PATCH', body: { caption: next.caption, comments: next.comments || [] } });
+    },
     deletePhoto: (id) => api(`photos/${id}`, { method: 'DELETE' }),
     downloadPhoto: null, // 일반 다운로드 링크 사용
     saveFile: null,
@@ -583,6 +609,14 @@ function localBackend() {
       const meta = { id: newId(), name: file.name || 'photo.jpg', caption, type: file.type, size: file.size, uploadedAt: new Date().toISOString(), ...photoExtra(extra) };
       await run('photos', 'readwrite', (s) => s.put({ ...meta, blob: file }));
       return meta;
+    },
+    updatePhoto: async (id, fn) => {
+      const cur = await run('photos', 'readonly', (st) => st.get(id));
+      if (!cur) throw fail('사진을 찾을 수 없어요');
+      const { blob, ...meta } = cur;
+      const next = fn(structuredClone(meta));
+      await run('photos', 'readwrite', (st) => st.put({ ...next, id, blob }));
+      return next;
     },
     deletePhoto: async (id) => {
       await run('photos', 'readwrite', (s) => s.delete(id));

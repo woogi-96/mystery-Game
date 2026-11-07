@@ -5,24 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fffbf3" />
   <title>멍뭉일지</title>
-  <!-- 홈 화면 앱: /admin 으로 열면 “멍뭉 관리자” 앱, 그 밖에는 “멍뭉일지” 앱 -->
+  <!-- 홈 화면 앱 정보 (관리자 앱은 admin.html) -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" id="appTitle" content="멍뭉일지" />
   <link rel="apple-touch-icon" id="appIcon" href="/assets/app/app-apple-touch-icon.png" />
   <link rel="manifest" id="appManifest" href="/manifest.webmanifest" />
-  <script>
-    (function () {
-      // /admin 주소로 열면 관리자 앱으로 꾸미고 관리자 화면을 바로 보여 줘요
-      if (!/^\/admin\/?$/.test(location.pathname)) return;
-      document.getElementById('appTitle').content = '멍뭉 관리자';
-      document.getElementById('appIcon').href = '/assets/app/admin-apple-touch-icon.png';
-      document.getElementById('appManifest').href = '/manifest-admin.webmanifest';
-      document.title = '멍뭉일지 관리자';
-      if (!location.hash) history.replaceState(null, '', location.pathname + '#admin');
-    })();
-  </script>
   <meta name="description" content="멍뭉이의 하루를 기록하는 작은 일지" />
   <link rel="icon" href="assets/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -158,7 +147,14 @@
           <span><b>우기 출근·퇴근 알림</b><small>우기 스케줄의 출근·퇴근 시간에 “우기가 출근 했어요 / 퇴근했어요”</small></span>
           <input type="checkbox" id="notifWork" />
         </label>
+        <label class="switch-row" id="notifSocialRow" hidden>
+          <span><b>사진·댓글 알림</b><small>상대방이 사진이나 댓글을 올리면 알려 줘요 (15분 안쪽으로)</small></span>
+          <input type="checkbox" id="notifSocial" />
+        </label>
         <p class="notif-warn" id="notifPerm" hidden>휴대폰 설정에서 멍뭉일지 알림이 꺼져 있어요. <button type="button" class="btn sm" id="notifOpen">알림 켜기</button></p>
+        <p class="app-update" id="appOld" hidden>📲 앱 새 버전 <b>1.2</b>가 있어요 (사진·댓글 알림, 스스로 업데이트). 이번 한 번만 직접 설치하면 다음부터는 앱이 알아서 업데이트를 알려 줘요.
+          <a class="btn primary sm" href="/download/meongmung-diary.apk">새 버전 받기</a></p>
+        <p class="app-version" id="appVer" hidden><span id="appVerText"></span> <button type="button" class="link-btn" id="appCheck">업데이트 확인</button></p>
         <div class="btn-row notif-test">
           <button type="button" class="btn sm" data-test="diary">미리 보기: 일기</button>
           <button type="button" class="btn sm" data-test="start">출근</button>
@@ -485,6 +481,13 @@
   <dialog id="lightbox">
     <button class="icon-btn close" id="lbClose" aria-label="닫기">✕</button>
     <img id="lbImg" alt="" />
+    <div class="lb-comments" id="lbComments" hidden>
+      <ul class="cm-list" id="cmList"></ul>
+      <form class="cm-form" id="cmForm" autocomplete="off">
+        <input id="cmInput" maxlength="200" placeholder="댓글 달기…" aria-label="댓글" />
+        <button class="btn primary sm" type="submit">보내기</button>
+      </form>
+    </div>
     <div class="lb-foot">
       <span id="lbCaption"></span>
       <span class="lb-actions">

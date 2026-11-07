@@ -196,6 +196,18 @@ async function handleApi(req, res, parts) {
       fs.createReadStream(fp).pipe(res);
       return;
     }
+    if (m === 'PATCH' && id) {
+      // 한마디·댓글 고치기 (누구나)
+      const b = await readJson(req);
+      if (b.caption !== undefined) photo.caption = str(b.caption, 60);
+      if (Array.isArray(b.comments)) {
+        photo.comments = b.comments.slice(-100).map((c) => ({
+          id: str(c.id, 40), by: c.by === 'woogi' ? 'woogi' : 'meongmung', text: str(c.text, 200), at: str(c.at, 40),
+        })).filter((c) => c.id && c.text);
+      }
+      await save();
+      return send(res, 200, photo);
+    }
     if (m === 'DELETE' && id) {
       // 사진은 누구나 지울 수 있어요
       db.photos = db.photos.filter((p) => p.id !== id);

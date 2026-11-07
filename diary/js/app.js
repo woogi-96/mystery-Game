@@ -3,6 +3,7 @@ import { meongmungImg, meongmungSmall, pawStampSVG, praiseStampSVG, workBadge } 
 import { statusAt, fixSchedule, workStatus } from './schedule.js';
 import { gate, isUnlocked, setLockVisible } from './lock.js';
 import { SUPABASE } from './config.js';
+import { getOwner, setOwner, ensureOwner, NAMES, ICONS } from './owner.js';
 import { initPlaces, placeCard, photoDay, render as renderPlaces } from './places.js';
 import { GREETINGS, timePhase } from './greeting.js';
 import { computeGrowth, LEVELS, REWARDS, TIPS } from './growth.js';
@@ -75,7 +76,7 @@ store.canWrite?.().then((ok) => { if (ok === false) $('#readonlyNote').hidden = 
    앱으로 돌아올 때와 15분마다, 주요 파일이 바뀌었는지(ETag) 확인해요 */
 (() => {
   if (store.mode === 'cloud' || !/^https?:$/.test(location.protocol)) return;
-  const WATCH = ['/', '/js/app.js', '/js/store.js', '/js/schedule-page.js', '/css/diary.css'];
+  const WATCH = ['/', '/admin.html', '/js/app.js', '/js/store.js', '/js/schedule-page.js', '/css/diary.css'];
   const fingerprint = async () => {
     try {
       const tags = await Promise.all(WATCH.map((u) => fetch(u, { method: 'HEAD', cache: 'no-store' })
@@ -360,15 +361,72 @@ let pendingPlaceDate = null;
 const lb = $('#lightbox');
 $('#lbClose').addEventListener('click', () => lb.close());
 lb.addEventListener('click', (e) => { if (e.target === lb) lb.close(); });
+let lbPhoto = null;
 function openPhoto(p, { readonly = false } = {}) {
   if (!p) return;
+  lbPhoto = readonly ? null : p;
   $('#lbImg').src = p.src;
-  $('#lbCaption').textContent = p.caption || p.name;
+  $('#lbCaption').textContent = `${p.by ? `${ICONS[p.by]} ${NAMES[p.by]} · ` : ''}${p.caption || p.name}`;
   $('#lbDownload').onclick = () => downloadPhoto(p);
   $('#lbDelete').hidden = readonly;
   $('#lbDelete').onclick = () => removePhoto(p);
+  $('#lbComments').hidden = readonly;
+  if (!readonly) renderComments();
   lb.showModal();
 }
+
+/* 💬 댓글 */
+const ago = (iso) => {
+  const s = (Date.now() - new Date(iso)) / 1000;
+  if (s < 60) return '방금';
+  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
+  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
+  return new Date(iso).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+};
+function renderComments() {
+  const list = lbPhoto?.comments || [];
+  const me = getOwner();
+  $('#cmList').innerHTML = list.length
+    ? list.map((c) => `<li class="cm ${c.by}">
+        <span class="cm-who">${ICONS[c.by] || '🐾'} ${NAMES[c.by] || ''}</span>
+        <span class="cm-text">${escapeHtml(c.text)}</span>
+        <span class="cm-at">${ago(c.at)}</span>
+        ${c.by === me ? `<button type="button" class="cm-del" data-cid="${escapeHtml(c.id)}" aria-label="댓글 지우기">✕</button>` : ''}
+      </li>`).join('')
+    : '<li class="cm-empty">첫 댓글을 남겨 보세요 💬</li>';
+  const ul = $('#cmList');
+  ul.scrollTop = ul.scrollHeight;
+}
+function applyComments(id, comments) {
+  if (lbPhoto && lbPhoto.id === id) lbPhoto.comments = comments;
+  const g = photos.find((x) => x.id === id);
+  if (g) g.comments = comments;
+  renderGallery(false);
+}
+$('#cmForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = $('#cmInput').value.trim();
+  if (!text || !lbPhoto) return;
+  const btn = e.target.querySelector('button');
+  btn.disabled = true;
+  try {
+    const by = await ensureOwner();
+    const c = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), by, text: text.slice(0, 200), at: new Date().toISOString() };
+    const next = await store.updatePhoto(lbPhoto.id, (d) => ({ ...d, comments: [...(d.comments || []), c].slice(-100) }));
+    $('#cmInput').value = '';
+    applyComments(lbPhoto.id, next.comments || []);
+    renderComments();
+  } catch (err) { showError(err); } finally { btn.disabled = false; }
+});
+$('#cmList').addEventListener('click', async (e) => {
+  const b = e.target.closest('.cm-del');
+  if (!b || !lbPhoto) return;
+  try {
+    const next = await store.updatePhoto(lbPhoto.id, (d) => ({ ...d, comments: (d.comments || []).filter((c) => c.id !== b.dataset.cid) }));
+    applyComments(lbPhoto.id, next.comments || []);
+    renderComments();
+  } catch (err) { showError(err); }
+});
 
 /* 사진 삭제 (누구나): 확인 → 지우기 → 갤러리·장소·달력 모두 새로 */
 async function removePhoto(p) {
@@ -437,7 +495,7 @@ async function initTogether() {
     let ok = 0;
     for (const [i, f] of pending.entries()) {
       btn.textContent = `올리는 중… ${i + 1}/${pending.length}`;
-      try { await store.uploadPhoto(f, caption, { date: $('#photoDate').value }); ok++; } catch (err) { showError(err); }
+      try { await store.uploadPhoto(f, caption, { date: $('#photoDate').value, by: await ensureOwner() }); ok++; } catch (err) { showError(err); }
     }
     btn.textContent = '올리기';
     input.value = '';
@@ -452,8 +510,8 @@ async function initTogether() {
 }
 
 let photos = [];
-async function renderGallery() {
-  photos = await store.listPhotos();
+async function renderGallery(refetch = true) {
+  if (refetch) photos = await store.listPhotos();
   const g = $('#gallery');
   if (!photos.length) {
     g.style.columns = 'auto';
@@ -465,7 +523,7 @@ async function renderGallery() {
     <figure class="photo" data-i="${i}">
       <img src="${p.src}" alt="${escapeHtml(p.caption || p.name)}" loading="lazy" />
       <figcaption>
-        <span>${escapeHtml(p.caption || '')}<br><span class="date">${p.placeId ? '📍 ' : ''}${new Date(`${photoDay(p)}T00:00`).toLocaleDateString('ko-KR')}</span></span>
+        <span>${escapeHtml(p.caption || '')}${p.comments?.length ? ` <span class="cm-count">💬 ${p.comments.length}</span>` : ''}<br><span class="date">${p.placeId ? '📍 ' : ''}${new Date(`${photoDay(p)}T00:00`).toLocaleDateString('ko-KR')}</span></span>
         <span class="ph-actions">
           <button class="dl" type="button" data-i="${i}" title="다운로드" aria-label="다운로드">⬇️</button>
           <button class="del" type="button" data-i="${i}" title="삭제" aria-label="삭제">🗑️</button>
@@ -579,36 +637,49 @@ async function initNotifCard() {
   let st = read();
   if (!st) return;
   // 알림은 멍뭉이 휴대폰에만: 처음 한 번 “이 휴대폰은 누구 거예요?” (관리자로 로그인한 휴대폰은 우기 것)
-  const OWNER = 'mm-device-owner';
-  let owner = null;
-  try { owner = localStorage.getItem(OWNER); } catch { /* 무시 */ }
-  const setOwner = (o) => {
+  let owner = getOwner();
+  // 일기·출퇴근 알림은 멍뭉이 휴대폰에만, 사진·댓글 알림은 둘 다
+  const applyOwner = (o) => {
     owner = o;
-    try { localStorage.setItem(OWNER, o); } catch { /* 무시 */ }
+    setOwner(o);
     nativeApp.setReminders(o === 'meongmung', o === 'meongmung');
     st = read();
   };
   const askOwner = async () => {
-    const isMeong = await askConfirm('이 휴대폰은 누구 거예요? 알림은 멍뭉이 휴대폰에만 울려요.', '🐶 멍뭉이 휴대폰', '🐰 우기 휴대폰', 'primary');
-    setOwner(isMeong ? 'meongmung' : 'woogi');
-    toast(isMeong ? '멍뭉이 휴대폰으로 정했어요. 알림을 켰어요 🔔' : '우기 휴대폰으로 정했어요. 알림은 꺼 둘게요');
+    const isMeong = await askConfirm('이 휴대폰은 누구 거예요? 일기·출퇴근 알림은 멍뭉이 휴대폰에만 울려요.', '🐶 멍뭉이 휴대폰', '🐰 우기 휴대폰', 'primary');
+    applyOwner(isMeong ? 'meongmung' : 'woogi');
+    toast(isMeong ? '멍뭉이 휴대폰으로 정했어요. 알림을 켰어요 🔔' : '우기 휴대폰으로 정했어요. 사진·댓글 알림만 받아요');
   };
   if (!owner) {
-    if (await store.isAdmin().catch(() => false)) setOwner('woogi');
+    if (await store.isAdmin().catch(() => false)) applyOwner('woogi');
     else await askOwner();
+  } else {
+    setOwner(owner); // 앱에 주인 알려 주기 (사진·댓글 알림에 써요)
+    if (!st.set) applyOwner(owner);
   }
   const paint = () => {
     st = read() || st;
     $('#notifOwner').textContent = owner === 'meongmung' ? '🐶 멍뭉이 휴대폰' : '🐰 우기 휴대폰';
     $('#notifDiary').checked = st.diary;
     $('#notifWork').checked = st.work;
-    $('#notifPerm').hidden = st.permission || !(st.diary || st.work);
+    $('#notifSocialRow').hidden = st.social === undefined; // 1.2 앱부터
+    $('#notifSocial').checked = st.social !== false;
+    $('#notifPerm').hidden = st.permission || !(st.diary || st.work || st.social);
   };
   paint();
   card.hidden = false;
+  // 앱 버전: 1.2 부터는 앱이 스스로 업데이트를 확인해요. 그 전 앱이면 한 번만 새로 받게 안내
+  if (nativeApp.checkUpdate) {
+    $('#appVer').hidden = false;
+    $('#appVerText').textContent = `앱 버전 ${st.version || ''}`;
+    $('#appCheck').addEventListener('click', () => nativeApp.checkUpdate());
+  } else {
+    $('#appOld').hidden = false;
+  }
   const save = () => { nativeApp.setReminders($('#notifDiary').checked, $('#notifWork').checked); setTimeout(paint, 1500); toast('알림 설정을 저장했어요 🔔'); };
   $('#notifDiary').addEventListener('change', save);
   $('#notifWork').addEventListener('change', save);
+  $('#notifSocial').addEventListener('change', () => { nativeApp.setSocial?.($('#notifSocial').checked); setTimeout(paint, 1500); toast('알림 설정을 저장했어요 🔔'); });
   $('#notifOpen').addEventListener('click', () => nativeApp.openNotificationSettings());
   $('#notifOwnerChange').addEventListener('click', async () => { await askOwner(); paint(); });
   card.querySelector('.notif-test').addEventListener('click', (e) => {

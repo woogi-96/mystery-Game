@@ -630,3 +630,29 @@ body.admin-mode .hdr-work { display: none; }
 .notif-owner b { color: var(--ink); font-weight: 700; }
 .link-btn { border: 0; background: none; color: var(--mint-dark); text-decoration: underline; font: inherit; cursor: pointer; padding: 0 2px; }
 .confirm-dlg .btn-row { flex-wrap: wrap; }
+
+/* 💬 사진 댓글 */
+dialog#lightbox { display: grid; grid-template-rows: auto auto auto; max-height: 92vh; }
+dialog#lightbox:not([open]) { display: none; }
+#lbImg { max-height: 52vh; }
+.lb-comments { border-top: 2px dashed var(--line); padding: 10px 14px 0; display: grid; gap: 8px; }
+.lb-comments[hidden] { display: none; }
+.cm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 22vh; overflow-y: auto; }
+.cm { display: grid; grid-template-columns: auto 1fr auto auto; gap: 6px; align-items: baseline; padding: 6px 10px; border-radius: 12px; background: #fffcf6; font-size: .9rem; }
+.cm.woogi { background: var(--pink-soft); }
+.cm.meongmung { background: var(--mint-soft); }
+.cm-who { font-family: 'Jua', sans-serif; white-space: nowrap; font-size: .85rem; }
+.cm-text { min-width: 0; word-break: break-all; }
+.cm-at { color: var(--muted); font-size: .72rem; white-space: nowrap; }
+.cm-del { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 2px; }
+.cm-empty { color: var(--muted); font-size: .85rem; text-align: center; padding: 4px; }
+.cm-form { display: flex; gap: 6px; }
+.cm-form input { padding: 9px 12px; min-height: 42px; }
+.cm-count { font-size: .75rem; color: var(--mint-dark); font-weight: 700; white-space: nowrap; }
+
+.app-update { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--yellow-soft); font-size: .85rem; line-height: 1.5; display: grid; gap: 8px; word-break: keep-all; }
+.app-update .btn { justify-self: start; }
+.app-version { margin: 0; font-size: .8rem; color: var(--muted); }
+.cm-form .btn { flex: none; white-space: nowrap; }
+.app-update { display: block; }
+.app-update .btn { display: inline-flex; margin-top: 8px; }

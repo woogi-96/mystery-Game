@@ -1,6 +1,7 @@
 // 관리자 화면 (index.html#admin)
 import { store, escapeHtml, toast, askConfirm, downloadPhoto } from './store.js';
 import { praiseStampSVG } from './character.js';
+import { unlockAsAdmin } from './lock.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const fail = (e) => {
@@ -11,6 +12,7 @@ const fail = (e) => {
 
 async function show() {
   const authed = await store.isAdmin();
+  if (authed) unlockAsAdmin();
   const pw = store.usesPassword;
   $('#loginBox').hidden = authed || !pw;
   $('#noAccess').hidden = authed || pw;
@@ -104,7 +106,7 @@ export function init() {
   inited = true;
   // 홈 화면 앱(/admin)이나 설치된 앱에서는 로그인 유지를 기본으로
   const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone;
-  $('#keepLogin').checked = !!standalone || /^\/admin\/?$/.test(location.pathname);
+  $('#keepLogin').checked = !!standalone || /^\/admin(\.html|\/)?$/.test(location.pathname);
 
   $('#forgotAdmin').addEventListener('click', () => {
     const r = store.adminReset;
@@ -130,6 +132,7 @@ export function init() {
       await store.login($('#pw').value, $('#keepLogin').checked);
       $('#pw').value = '';
       toast('어서 와요, 관리자님 🐾');
+      unlockAsAdmin();
       show();
     } catch (err) {
       toast(err.status === 401 ? '비밀번호가 틀렸어요' : err.message, 'err');

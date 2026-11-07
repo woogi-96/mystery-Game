@@ -12,8 +12,14 @@ const remember = (t) => { try { localStorage.setItem(KEY, t); } catch { /* 기�
 
 let gatePromise = null;
 let showing = false; // 잠금 화면이 떠 있는 중인지
+let forceOpen = null; // 관리자로 로그인하면 잠금 화면을 열어 줘요
 
 /** 관리자 화면으로 갈 때는 잠금 화면을 잠깐 치우고, 돌아오면 다시 보여 줘요 */
+/** 관리자로 로그인했으면 입장 비밀번호 없이 들어가요 */
+export function unlockAsAdmin() {
+  if (forceOpen) forceOpen();
+}
+
 export function setLockVisible(v) {
   if (!showing) return;
   $('#lock').hidden = !v;
@@ -69,8 +75,10 @@ async function run() {
       document.body.classList.remove('locked');
       setTimeout(() => { lock.hidden = true; lock.classList.remove('out'); }, 450);
       document.removeEventListener('keydown', onKey);
+      forceOpen = null;
       resolve();
     };
+    forceOpen = () => open('');
 
     async function complete() {
       busy = true;
