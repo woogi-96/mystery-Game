@@ -200,7 +200,7 @@ async function cloudBackend() {
         const assets = await assetsP;
         if (assets) img = (await assets.upload(await normalizeImage(imageFile), { type: 'image/jpeg' }).catch(() => null))?.id || null;
       }
-      for (const e of entries) await wrap(() => db.collection('schedule').doc(e.date).set({ text: e.text, img, at: new Date().toISOString() }));
+      for (const e of entries) await wrap(() => db.collection('schedule').doc(e.date).set({ text: e.text, start: e.start || null, end: e.end || null, img, at: new Date().toISOString() }));
     },
     deleteScheduleDay: async (date) => { await needEditor(); await wrap(() => db.collection('schedule').doc(date).delete()); },
     getStamps: async () => Object.fromEntries((await allDocs('stamps')).map((d) => [d.id, d.data()])),
@@ -376,7 +376,7 @@ function supaBackend() {
         }).catch(() => null);
         if (r?.ok) img = name;
       }
-      for (const e of entries) await put('schedule', e.date, { text: e.text, img, at: new Date().toISOString() });
+      for (const e of entries) await put('schedule', e.date, { text: e.text, start: e.start || null, end: e.end || null, img, at: new Date().toISOString() });
     },
     deleteScheduleDay: (date) => del('schedule', date),
     getStamps: async () => Object.fromEntries((await list('stamps')).map((d) => [d.id, d.data])),
@@ -479,7 +479,7 @@ async function serverBackend() {
       if (imageFile) {
         img = (await api('schedule-image', { method: 'POST', body: imageFile, headers: { 'content-type': imageFile.type || 'image/jpeg' }, admin: true }).catch(() => ({}))).img || null;
       }
-      for (const e of entries) await api(`schedule/${e.date}`, { method: 'PUT', body: { text: e.text, img }, admin: true });
+      for (const e of entries) await api(`schedule/${e.date}`, { method: 'PUT', body: { text: e.text, start: e.start, end: e.end, img }, admin: true });
     },
     deleteScheduleDay: (date) => api(`schedule/${date}`, { method: 'DELETE', admin: true }),
     getStamps: () => api('stamps'),
@@ -620,7 +620,7 @@ function localBackend() {
       let img = null;
       if (imageFile) { img = newId(); await kvSet(`schedImg:${img}`, imageFile); }
       const sc = await kvGet('schedule', {});
-      for (const e of entries) sc[e.date] = { text: e.text, img, at: new Date().toISOString() };
+      for (const e of entries) sc[e.date] = { text: e.text, start: e.start || null, end: e.end || null, img, at: new Date().toISOString() };
       await kvSet('schedule', sc);
     },
     deleteScheduleDay: async (date) => {

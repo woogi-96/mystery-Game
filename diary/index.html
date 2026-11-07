@@ -264,6 +264,7 @@
       <div class="card sched-head">
         <h2>🗓️ 우기 스케줄</h2>
         <p class="muted small">우기가 올린 스케줄이에요. 날짜를 누르면 그날 스케줄이 보여요.</p>
+        <div class="sc-now" id="scNow" aria-live="polite"></div>
       </div>
 
       <div class="card calendar">
@@ -282,12 +283,16 @@
       <!-- 우기(관리자로 로그인한 기기)에게만 보여요 -->
       <div class="card sc-upload" id="scUpload" hidden>
         <h3>📷 스케줄 캡처 올리기</h3>
-        <p class="muted small">근무표나 캘린더 캡처를 올리면 글자를 읽어서 날짜별로 채워 줘요. 저장하기 전에 확인하고 고칠 수 있어요.</p>
+        <p class="muted small">① 근무표·캘린더 캡처를 고르고 ② <b>글자 인식하기</b>를 누르면 날짜·근무·시간을 채워 줘요. ③ 확인하고 고친 뒤 저장해요.</p>
         <label class="drop small">
           <input type="file" id="scFile" accept="image/*" />
           <span class="drop-icon">＋</span>
           <span id="scFileText">스케줄 캡처 고르기</span>
         </label>
+        <div class="sc-picked" id="scPicked" hidden>
+          <img id="scPick" alt="고른 스케줄 캡처" />
+          <button class="btn primary block" id="scRead" type="button">🔍 글자 인식하기</button>
+        </div>
         <div class="sc-progress" id="scProgress" hidden>
           <div class="sc-bar"><i id="scBar"></i></div>
           <span class="muted small" id="scProgressText"></span>
@@ -308,7 +313,8 @@
           <summary>캡처 없이 직접 입력하기</summary>
           <form class="stack" id="scManual">
             <input type="date" id="scManualDate" required />
-            <input id="scManualText" maxlength="200" placeholder="예) 오픈 09:00-18:00" required />
+            <input id="scManualText" maxlength="200" placeholder="근무·일정 (예: 오픈)" />
+            <div class="sc-time">⏰ <input type="time" id="scManualStart" aria-label="시작 시간" /> ~ <input type="time" id="scManualEnd" aria-label="끝 시간" /></div>
             <button class="btn" type="submit">저장</button>
           </form>
         </details>

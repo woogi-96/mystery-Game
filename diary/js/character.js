@@ -43,3 +43,15 @@ export function praiseStampSVG(cls = '') {
     <text x="50" y="70" text-anchor="middle" font-family="Jua, sans-serif" font-size="13" fill="#e2456b">참 잘했어요</text>
   </svg>`;
 }
+
+/** 출근/퇴근 발바닥 배지: state = working | off | before | rest */
+export function workBadge(state) {
+  const info = {
+    working: ['출근 중', 'working'],
+    off: ['퇴근', 'off'],
+    before: ['출근 전', 'before'],
+    rest: ['쉬는 날', 'rest'],
+  }[state];
+  if (!info) return '';
+  return `<span class="work-badge ${info[1]}" role="status">${pawStampSVG('wb-paw')}<span>${info[0]}</span></span>`;
+}

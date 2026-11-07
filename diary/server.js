@@ -237,9 +237,10 @@ async function handleApi(req, res, parts) {
     requireAdmin(req);
     checkDate(id);
     if (m === 'PUT') {
-      const { text, img } = await readJson(req);
-      if (!str(text, 200)) throw new HttpError(400, '스케줄 내용을 써 주세요');
-      db.schedule[id] = { text: str(text, 200), img: /^[\w.-]+$/.test(img || '') ? img : null, at: new Date().toISOString() };
+      const { text, img, start, end } = await readJson(req);
+      const hm = (v) => (/^\d{2}:\d{2}$/.test(v || '') ? v : null);
+      if (!str(text, 200) && !hm(start)) throw new HttpError(400, '스케줄 내용이나 시간을 써 주세요');
+      db.schedule[id] = { text: str(text, 200), start: hm(start), end: hm(end), img: /^[\w.-]+$/.test(img || '') ? img : null, at: new Date().toISOString() };
     } else if (m === 'DELETE') delete db.schedule[id];
     else throw new HttpError(405, '허용되지 않는 요청이에요');
     await save();

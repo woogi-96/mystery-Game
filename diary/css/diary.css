@@ -540,3 +540,38 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* 오늘의 멍뭉 달력: 스케줄이 있는 날은 작은 분홍 점, 앞날이어도 눌러서 볼 수 있어요 */
 .cal-day.has-sched::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--pink); }
 .cal-day.future.has-sched { opacity: .85; cursor: pointer; }
+
+/* 스케줄: 시간 · 출근/퇴근 발바닥 */
+.sc-now { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--yellow-soft); }
+.sc-now:empty { display: none; }
+.sc-now-label { font-family: 'Jua', sans-serif; color: var(--brown); }
+.work-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px 4px 6px; border-radius: 999px; font-family: 'Jua', sans-serif; font-size: .92rem; white-space: nowrap; flex: none; }
+.work-badge .paw-stamp { width: 24px; height: 24px; }
+.work-badge.working { background: var(--mint); color: #fff; box-shadow: 0 3px 0 var(--mint-dark); animation: pop 1.6s ease-in-out infinite; }
+.work-badge.working .paw-stamp g { fill: #fff; stroke: #e6f8f3; }
+.work-badge.off { background: var(--pink); color: #fff; box-shadow: 0 3px 0 #e2577a; }
+.work-badge.off .paw-stamp g { fill: #fff; stroke: #ffd3de; }
+.work-badge.off .paw-stamp path, .work-badge.working .paw-stamp path { fill: var(--yellow); }
+.work-badge.before { background: #fff; color: var(--muted); border: 2px solid var(--line); }
+.work-badge.before .paw-stamp { filter: grayscale(1); opacity: .6; }
+.work-badge.rest { background: #eae6ff; color: #6c5bb3; }
+.work-badge.rest .paw-stamp { filter: hue-rotate(160deg); }
+.sc-line { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sc-line .sc-text { margin: 4px 0; }
+.sc-when { margin: 0 0 10px; font-weight: 700; color: var(--mint-dark); }
+.sc-hm { display: block; font-size: .6rem; color: var(--muted); line-height: 1.2; }
+.sc-day { position: relative; }
+.sc-paw { position: absolute; top: -6px; right: -4px; font-size: .9rem; filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
+.sc-paw.off { filter: hue-rotate(300deg) saturate(2) drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
+.sc-picked { display: grid; gap: 10px; }
+.sc-picked img { width: 100%; max-height: 260px; object-fit: contain; border-radius: 12px; background: #faf5ea; }
+.sc-rows li { grid-template-columns: 9.5em 1fr auto; row-gap: 4px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+.sc-time { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: var(--muted); font-size: .9rem; }
+.sc-time input { width: auto; flex: 1; min-width: 7.5em; padding: 6px 8px; min-height: 40px; }
+.sc-time small { color: var(--mint-dark); }
+.day-sched .work-badge { margin-left: auto; }
+.day-sched { flex-wrap: wrap; align-items: center; }
+.sc-paw { top: -7px; right: -5px; width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
+.sc-paw .paw-stamp { width: 20px; height: 20px; display: block; }
+.sc-paw.off { filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
+.sc-paw.off .paw-stamp g { fill: var(--pink); stroke: #e2577a; }

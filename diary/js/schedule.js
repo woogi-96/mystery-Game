@@ -180,3 +180,64 @@ export function parseSchedule(ocr, ym) {
   for (const e of pick) map.set(e.date, map.has(e.date) ? `${map.get(e.date)} / ${e.text}` : e.text);
   return [...map].map(([date, text]) => ({ date, text })).sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/** “오픈 09:00-18:00”, “마감 오후 1시~10시” → { label: '오픈', start: '09:00', end: '18:00' } */
+export function splitTime(text = '') {
+  const T = '(오전|오후|AM|PM|am|pm)?\\s*(\\d{1,2})\\s*(?:[:시.]\\s*(\\d{2})?\\s*분?)';
+  // si: “2시”처럼 ‘시’로 쓴 시간. 오전/오후 없이 1~6시면 보통 오후라서 오후로 봐요
+  const norm = (ap, h, m, si = false) => {
+    let hh = +h;
+    if (/오후|pm/i.test(ap || '') && hh < 12) hh += 12;
+    if (!ap && si && hh >= 1 && hh <= 6) hh += 12;
+    if (/오전|am/i.test(ap || '') && hh === 12) hh = 0;
+    if (hh > 24) return null;
+    return `${String(hh).padStart(2, '0')}:${String(+(m || 0)).padStart(2, '0')}`;
+  };
+  const range = text.match(new RegExp(`${T}\\s*[-~–]\\s*${T.replace('?\\s*(\\d{1,2})', '?\\s*(\\d{1,2})')}?`));
+  let start = null;
+  let end = null;
+  let rest = text;
+  if (range) {
+    start = norm(range[1], range[2], range[3], /\d\s*시/.test(range[0].split(/[-~–]/)[0]));
+    end = range[5] ? norm(range[4] || (/오후|pm/i.test(range[1] || '') ? range[1] : ''), range[5], range[6]) : null;
+    // “오후 1시~10시”: 끝 시간이 시작보다 이르면 오후로
+    if (start && end && end < start && +end.slice(0, 2) < 12) end = `${String(+end.slice(0, 2) + 12).padStart(2, '0')}${end.slice(2)}`;
+    rest = text.replace(range[0], ' ');
+  } else {
+    const one = text.match(new RegExp(T));
+    if (one && (one[3] || /시/.test(one[0]))) { start = norm(one[1], one[2], one[3], /시/.test(one[0])); rest = text.replace(one[0], ' '); }
+  }
+  const label = rest.replace(/\s*[-~–]\s*$/, '').replace(/\s+/g, ' ').replace(/^[\s,./:]+|[\s,./:]+$/g, '').trim();
+  return { label, start, end };
+}
+
+/**
+ * 지금(휴대폰 시간) 우기가 출근 중인지, 퇴근했는지
+ * schedule: { 'YYYY-MM-DD': { text, start, end } }
+ * → { state: 'working' | 'off' | 'before' | 'rest' | null, entry, date }
+ *   밤샘 근무(끝 시간이 시작보다 이르면 다음 날 끝)도 알아봐요
+ */
+export function workStatus(schedule, now = new Date()) {
+  const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const at = (date, hm) => new Date(`${date}T${hm}:00`);
+  const range = (date, e) => {
+    if (!e?.start || !e?.end) return null;
+    const s = at(date, e.start);
+    const f = at(date, e.end);
+    if (f <= s) f.setDate(f.getDate() + 1);
+    return [s, f];
+  };
+  const today = key(now);
+  const y = new Date(now); y.setDate(y.getDate() - 1);
+  const yKey = key(y);
+  // 어제 시작한 밤샘 근무가 아직 안 끝났으면 출근 중
+  const yr = range(yKey, schedule[yKey]);
+  if (yr && now >= yr[0] && now < yr[1]) return { state: 'working', entry: schedule[yKey], date: yKey };
+  const e = schedule[today];
+  if (!e) return { state: null };
+  const r = range(today, e);
+  if (!r) return { state: /휴무|휴일|쉬는|오프|off|OFF/.test(e.text || '') ? 'rest' : null, entry: e, date: today };
+  if (now < r[0]) return { state: 'before', entry: e, date: today };
+  if (now < r[1]) return { state: 'working', entry: e, date: today };
+  return { state: 'off', entry: e, date: today };
+}
