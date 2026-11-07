@@ -4,6 +4,6 @@
 // ⚠️ “service_role” 키는 절대 넣지 마세요.
 // 비워 두면 server.js(서버 방식) 또는 이 브라우저 저장 방식으로 동작해요.
 export const SUPABASE = {
-  url: '',
-  anonKey: '',
+  url: 'https://ksqnpswbdttcshkpnpbc.supabase.co',
+  anonKey: 'sb_publishable_ZB80504AqkOWt0GkipH32g_ZuuG7hs3',
 };
