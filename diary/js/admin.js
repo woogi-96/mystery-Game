@@ -102,6 +102,9 @@ let inited = false;
 export function init() {
   if (inited) return;
   inited = true;
+  // 홈 화면 앱(/admin)이나 설치된 앱에서는 로그인 유지를 기본으로
+  const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone;
+  $('#keepLogin').checked = !!standalone || /^\/admin\/?$/.test(location.pathname);
 
   $('#forgotAdmin').addEventListener('click', () => {
     const r = store.adminReset;
@@ -124,7 +127,7 @@ export function init() {
   $('#loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      await store.login($('#pw').value);
+      await store.login($('#pw').value, $('#keepLogin').checked);
       $('#pw').value = '';
       toast('어서 와요, 관리자님 🐾');
       show();

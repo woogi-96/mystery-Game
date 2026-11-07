@@ -1,4 +1,4 @@
-import { store, dateKey, escapeHtml, toast, downloadPhoto } from './store.js';
+import { store, dateKey, escapeHtml, toast, downloadPhoto, askConfirm } from './store.js';
 import { meongmungImg, meongmungSmall, pawStampSVG, praiseStampSVG } from './character.js';
 import { gate, isUnlocked, setLockVisible } from './lock.js';
 import { initPlaces, placeCard, photoDay, render as renderPlaces } from './places.js';
@@ -53,6 +53,20 @@ $('#modeNote').textContent = store.local
 
 // 보기 전용으로 공유받았으면 안내를 보여 줘요
 store.canWrite?.().then((ok) => { if (ok === false) $('#readonlyNote').hidden = false; }).catch(() => {});
+
+// 아이폰 사파리에서는 “홈 화면에 추가” 방법을 알려 줘요 (이미 앱으로 열었으면 안 보여요)
+(() => {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone;
+  let dismissed = false;
+  try { dismissed = localStorage.getItem('mm-install-tip') === 'no'; } catch { /* 무시 */ }
+  if (!ios || standalone || dismissed) return;
+  $('#installTip').hidden = false;
+  $('#installTipClose').onclick = () => {
+    $('#installTip').hidden = true;
+    try { localStorage.setItem('mm-install-tip', 'no'); } catch { /* 무시 */ }
+  };
+})();
 
 let adminMod = null;
 async function initAdmin() {
@@ -301,7 +315,23 @@ function openPhoto(p) {
   $('#lbImg').src = p.src;
   $('#lbCaption').textContent = p.caption || p.name;
   $('#lbDownload').onclick = () => downloadPhoto(p);
+  $('#lbDelete').onclick = () => removePhoto(p);
   lb.showModal();
+}
+
+/* 사진 삭제 (누구나): 확인 → 지우기 → 갤러리·장소·달력 모두 새로 */
+async function removePhoto(p) {
+  if (!p || !(await askConfirm('이 사진을 삭제할까요? 지우면 되돌릴 수 없어요.', '삭제'))) return;
+  try {
+    await store.deletePhoto(p.id);
+    if (lb.open) lb.close();
+    toast('사진을 삭제했어요 🗑️');
+    renderGallery().catch(() => {});
+    if (loaded.together) renderPlaces().catch(() => {});
+    if (loaded.todayReady) loadToday().then(renderCalendar).catch(() => {});
+  } catch (err) {
+    showError(err.status === 401 ? new Error('사진을 지울 수 없어요. 관리자에게 Supabase 설정 업데이트를 부탁해 주세요.') : err);
+  }
 }
 
 function showTogetherView(v) {
@@ -385,12 +415,17 @@ async function renderGallery() {
       <img src="${p.src}" alt="${escapeHtml(p.caption || p.name)}" loading="lazy" />
       <figcaption>
         <span>${escapeHtml(p.caption || '')}<br><span class="date">${p.placeId ? '📍 ' : ''}${new Date(`${photoDay(p)}T00:00`).toLocaleDateString('ko-KR')}</span></span>
-        <button class="dl" type="button" data-i="${i}" title="다운로드" aria-label="다운로드">⬇️</button>
+        <span class="ph-actions">
+          <button class="dl" type="button" data-i="${i}" title="다운로드" aria-label="다운로드">⬇️</button>
+          <button class="del" type="button" data-i="${i}" title="삭제" aria-label="삭제">🗑️</button>
+        </span>
       </figcaption>
     </figure>`).join('');
   g.onclick = (e) => {
     const dlBtn = e.target.closest('.dl');
     if (dlBtn) { downloadPhoto(photos[+dlBtn.dataset.i]); return; }
+    const delBtn = e.target.closest('.del');
+    if (delBtn) { removePhoto(photos[+delBtn.dataset.i]); return; }
     const f = e.target.closest('.photo');
     if (f) openPhoto(photos[+f.dataset.i]);
   };

@@ -3,8 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#fff6e3" />
+  <meta name="theme-color" content="#fffbf3" />
   <title>멍뭉일지</title>
+  <!-- 홈 화면 앱: /admin 으로 열면 “멍뭉 관리자” 앱, 그 밖에는 “멍뭉일지” 앱 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" id="appTitle" content="멍뭉일지" />
+  <link rel="apple-touch-icon" id="appIcon" href="/assets/app/app-apple-touch-icon.png" />
+  <link rel="manifest" id="appManifest" href="/manifest.webmanifest" />
+  <script>
+    (function () {
+      // /admin 주소로 열면 관리자 앱으로 꾸미고 관리자 화면을 바로 보여 줘요
+      if (!/^\/admin\/?$/.test(location.pathname)) return;
+      document.getElementById('appTitle').content = '멍뭉 관리자';
+      document.getElementById('appIcon').href = '/assets/app/admin-apple-touch-icon.png';
+      document.getElementById('appManifest').href = '/manifest-admin.webmanifest';
+      document.title = '멍뭉일지 관리자';
+      if (!location.hash) history.replaceState(null, '', location.pathname + '#admin');
+    })();
+  </script>
   <meta name="description" content="멍뭉이의 하루를 기록하는 작은 일지" />
   <link rel="icon" href="assets/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -40,6 +58,10 @@
   <div class="readonly-note" id="readonlyNote" hidden>
     👀 지금은 <b>보기만</b> 할 수 있어요. 글을 쓰고 사진을 올리려면 이 페이지 주인에게
     <b>이메일로 “편집자(Editor)” 초대</b>를 받아 주세요.
+  </div>
+  <div class="install-tip" id="installTip" hidden>
+    <span>📱 <b>앱처럼 쓰기</b>: 아래 <b>공유 버튼(⬆️)</b> → <b>홈 화면에 추가</b>를 누르면 아이콘으로 바로 열려요.</span>
+    <button type="button" id="installTipClose" aria-label="닫기">✕</button>
   </div>
   <main>
     <!-- 1. 소개 -->
@@ -256,6 +278,7 @@
       <p class="muted small">일기·사진·소개서를 관리하려면 비밀번호를 입력해 주세요.</p>
       <form id="loginForm">
         <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password" required />
+        <label class="keep"><input type="checkbox" id="keepLogin" /> 이 기기에서 로그인 유지</label>
         <button class="btn primary" type="submit">로그인</button>
       </form>
       <button class="lock-forgot" id="forgotAdmin" type="button">관리자 비밀번호를 잊었어요</button>
@@ -373,7 +396,10 @@
     <img id="lbImg" alt="" />
     <div class="lb-foot">
       <span id="lbCaption"></span>
-      <button class="btn primary" id="lbDownload" type="button">⬇ 다운로드</button>
+      <span class="lb-actions">
+        <button class="btn danger sm" id="lbDelete" type="button">🗑️ 삭제</button>
+        <button class="btn primary" id="lbDownload" type="button">⬇ 다운로드</button>
+      </span>
     </div>
   </dialog>
 

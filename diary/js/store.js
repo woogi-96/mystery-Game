@@ -38,11 +38,20 @@ function fail(msg, status) {
 }
 
 /* ---------- 관리자 키 (server / local 방식에서 세션 동안만 기억) ---------- */
+// “로그인 유지”를 고르면 이 기기에 계속 기억해요 (홈 화면 관리자 앱용). 로그아웃하면 지워져요.
 function adminKey() {
-  try { return sessionStorage.getItem(ADMIN_KEY) || ''; } catch { return ''; }
+  try { return sessionStorage.getItem(ADMIN_KEY) || localStorage.getItem(ADMIN_KEY) || ''; } catch { return ''; }
 }
-function setAdminKey(v) {
-  try { v ? sessionStorage.setItem(ADMIN_KEY, v) : sessionStorage.removeItem(ADMIN_KEY); } catch { /* 무시 */ }
+function setAdminKey(v, keep = false) {
+  try {
+    if (v) {
+      sessionStorage.setItem(ADMIN_KEY, v);
+      if (keep) localStorage.setItem(ADMIN_KEY, v); else localStorage.removeItem(ADMIN_KEY);
+    } else {
+      sessionStorage.removeItem(ADMIN_KEY);
+      localStorage.removeItem(ADMIN_KEY);
+    }
+  } catch { /* 무시 */ }
 }
 
 // 업로드 가능한 형식(png/jpeg/gif/webp, 20MB)이 아니면 JPEG로 바꿔요 (아이폰 HEIC 등)
@@ -140,7 +149,7 @@ async function cloudBackend() {
       return { ...meta, id };
     },
     deletePhoto: async (id) => {
-      await needEditor();
+      // 사진은 함께 쓰는 사람 누구나 지울 수 있어요
       const s = await wrap(() => db.collection('photos').doc(id).get());
       if (s.exists) {
         const assets = await assetsP;
@@ -367,10 +376,10 @@ function supaBackend() {
     // 관리자: 처음 로그인할 때 쓴 비밀번호가 관리자 비밀번호가 돼요
     usesPassword: true,
     isAdmin: async () => !!adminKey() && (await rpc('mm_check', { p_token: adminKey() }).catch(() => null)) === 'admin',
-    login: async (pw) => {
+    login: async (pw, keep = false) => {
       const t = await rpc('mm_admin_login', { p_pw: pw });
       if (!t) throw fail('비밀번호가 틀렸어요', 401);
-      setAdminKey(t);
+      setAdminKey(t, keep);
       return true;
     },
     logout: () => setAdminKey(''),
@@ -428,7 +437,7 @@ async function serverBackend() {
         'x-extra': encodeURIComponent(JSON.stringify(photoExtra(extra))),
       },
     }),
-    deletePhoto: (id) => api(`photos/${id}`, { method: 'DELETE', admin: true }),
+    deletePhoto: (id) => api(`photos/${id}`, { method: 'DELETE' }),
     downloadPhoto: null, // 일반 다운로드 링크 사용
     saveFile: null,
     getPlaces: () => api('places'),
@@ -537,7 +546,6 @@ function localBackend() {
       return meta;
     },
     deletePhoto: async (id) => {
-      await check();
       await run('photos', 'readwrite', (s) => s.delete(id));
       if (urlCache.has(id)) { URL.revokeObjectURL(urlCache.get(id)); urlCache.delete(id); }
       return { ok: true };

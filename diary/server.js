@@ -196,7 +196,7 @@ async function handleApi(req, res, parts) {
       return;
     }
     if (m === 'DELETE' && id) {
-      requireAdmin(req);
+      // 사진은 누구나 지울 수 있어요
       db.photos = db.photos.filter((p) => p.id !== id);
       await fsp.rm(path.join(UPLOADS, photo.file), { force: true });
       await save();

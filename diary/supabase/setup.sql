@@ -169,10 +169,11 @@ begin
     on conflict (coll, id) do update set data = excluded.data, updated_at = now();
 end $$;
 
+-- 사진은 입장 비밀번호가 있는 사람 누구나, 그 밖(일기·장소 등)은 관리자만 지울 수 있어요
 create or replace function public.mm_del(p_token text, p_coll text, p_id text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 begin
-  perform mm_need(p_token, true);
+  perform mm_need(p_token, p_coll <> 'photos');
   delete from mm_docs where coll = p_coll and id = p_id;
 end $$;
 
