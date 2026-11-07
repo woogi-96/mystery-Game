@@ -1,6 +1,6 @@
 import { store, dateKey, escapeHtml, toast, downloadPhoto, askConfirm } from './store.js';
 import { meongmungImg, meongmungSmall, pawStampSVG, praiseStampSVG, workBadge } from './character.js';
-import { workStatus } from './schedule.js';
+import { statusAt } from './schedule.js';
 import { gate, isUnlocked, setLockVisible } from './lock.js';
 import { initPlaces, placeCard, photoDay, render as renderPlaces } from './places.js';
 import { GREETINGS, timePhase } from './greeting.js';
@@ -339,8 +339,7 @@ function renderCalendar(stampedDate = null) {
   const addLink = selectedDay && selectedDay <= t
     ? `<button type="button" class="add-place" data-add-place="${selectedDay}">＋ 이날 다녀온 곳 남기기</button>` : '';
   const sch = calSchedule[selectedDay];
-  const ws = workStatus(calSchedule);
-  const schHtml = sch ? `<div class="day-sched"><span>🗓️ 우기 스케줄</span><b>${escapeHtml(sch.text || '')}${sch.start ? ` ⏰ ${sch.start}${sch.end ? `~${sch.end}` : ''}` : ''}</b>${selectedDay === ws.date ? workBadge(ws.state) : ''}</div>` : '';
+  const schHtml = sch ? `<div class="day-sched"><span>🗓️ 우기 스케줄</span><b>${escapeHtml(sch.text || '근무')}${sch.start ? ` ⏰ ${sch.start}${sch.end ? `~${sch.end}` : ''}` : ''}</b>${workBadge(statusAt(selectedDay, sch))}</div>` : '';
   $('#calDetail').innerHTML = `<div class="day-diary">${diaryHtml}</div>${schHtml}${placesHtml}${photosHtml}${addLink}`;
 
   const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}`;

@@ -1,9 +1,10 @@
 // 🗓️ 우기 스케줄 화면
-// - 우기(관리자로 로그인한 기기)가 캡처를 올리고 “글자 인식하기”를 누르면 날짜·내용·시간을 채워 줘요
+// - 우기(관리자로 로그인한 기기)가 캡처를 올리고 “글자 인식하기”를 누르면
+//   날짜·출근 시간·퇴근 시간이 적힌 표의 행만 골라서 채워 줘요
 // - 확인하고 고친 뒤 “달력에 저장”
 // - 휴대폰 시간으로 지금 출근 중인지, 퇴근했는지 발바닥 배지로 보여 줘요
 import { store, dateKey, escapeHtml, toast, askConfirm } from './store.js';
-import { readImage, detectMonth, parseSchedule, splitTime, workStatus } from './schedule.js';
+import { readImage, detectMonth, parseSchedule, workStatus, statusAt } from './schedule.js';
 import { workBadge, pawStampSVG } from './character.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -27,17 +28,6 @@ function rememberTimes(entries) {
   const k = knownTimes();
   for (const e of entries) if (e.text && e.start) k[e.text] = { start: e.start, end: e.end || null };
   try { localStorage.setItem(TIMES_KEY, JSON.stringify(k)); } catch { /* 무시 */ }
-}
-
-/** 읽은 글을 이름 + 시간으로 나누고, 시간이 없으면 기억해 둔 시간으로 채워요 */
-function withTimes(list) {
-  const k = knownTimes();
-  return list.map((r) => {
-    const t = splitTime(r.text);
-    const label = t.label || r.text;
-    const mem = !t.start && k[label];
-    return { date: r.date, text: label, start: t.start || mem?.start || '', end: t.end || mem?.end || '', remembered: !!mem };
-  });
 }
 
 export async function initSchedule(o) {
@@ -96,7 +86,7 @@ export async function initSchedule(o) {
       lastOcr = await readImage(pickedFile, (p, msg) => { bar.style.width = `${Math.round(p * 100)}%`; $('#scProgressText').textContent = msg; });
       const ym = detectMonth(lastOcr.text, { year: month.getFullYear(), month: month.getMonth() + 1 });
       $('#scMonth').value = `${ym.year}-${String(ym.month).padStart(2, '0')}`;
-      rows = withTimes(parseSchedule(lastOcr, ym));
+      rows = parseSchedule(lastOcr, ym);
       showReview();
       $('#scReview').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (err) {
@@ -109,7 +99,7 @@ export async function initSchedule(o) {
   $('#scMonth').addEventListener('change', () => {
     if (!lastOcr || !$('#scMonth').value) return;
     const [y, m] = $('#scMonth').value.split('-').map(Number);
-    rows = withTimes(parseSchedule(lastOcr, { year: y, month: m }));
+    rows = parseSchedule(lastOcr, { year: y, month: m });
     showReview();
   });
   $('#scRows').addEventListener('input', (e) => {
@@ -190,11 +180,11 @@ function showReview() {
   $('#scReview').hidden = false;
   if (pickedFile) $('#scPreview').src = $('#scPick').src;
   $('#scFound').textContent = rows.length
-    ? `${rows.length}일을 찾았어요. 틀린 곳이나 빠진 시간은 고쳐 주세요.`
-    : '날짜를 찾지 못했어요. “줄 추가”로 직접 넣어 주세요.';
+    ? `날짜·출근·퇴근 시간이 있는 ${rows.length}일을 찾았어요. 틀린 곳은 고쳐 주세요.`
+    : '날짜·출근 시간·퇴근 시간이 함께 적힌 표를 찾지 못했어요. “줄 추가”로 직접 넣어 주세요.';
   $('#scRows').innerHTML = rows.map((r, i) => `<li data-i="${i}">
       <input type="date" data-f="date" value="${r.date}" aria-label="날짜" />
-      <input type="text" data-f="text" value="${escapeHtml(r.text)}" maxlength="200" placeholder="근무·일정 (예: 오픈)" aria-label="스케줄" />
+      <input type="text" data-f="text" value="${escapeHtml(r.text)}" maxlength="200" placeholder="메모 (선택)" aria-label="메모" />
       <button type="button" class="icon-btn" data-remove="${i}" aria-label="이 줄 빼기">✕</button>
       <span class="sc-time">⏰
         <input type="time" data-f="start" value="${r.start || ''}" aria-label="시작 시간" /> ~
@@ -216,7 +206,7 @@ function render() {
   // 지금 상태 (휴대폰 시간 기준)
   const now = workStatus(schedule);
   $('#scNow').innerHTML = now.state
-    ? `<span class="sc-now-label">지금 우기는</span>${workBadge(now.state)}<span class="muted small">${escapeHtml(now.entry?.text || '')}${now.entry?.start ? ` · ${timeText(now.entry)}` : ''}</span>`
+    ? `<span class="sc-now-label">지금 우기는</span>${workBadge(now.state)}<span class="muted small">${escapeHtml(now.entry?.text || '')}${now.entry?.text && now.entry?.start ? ' · ' : ''}${now.entry?.start ? timeText(now.entry) : ''}</span>`
     : '<span class="muted small">오늘은 등록된 근무 시간이 없어요.</span>';
 
   const y = month.getFullYear();
@@ -234,15 +224,18 @@ function render() {
     const cls = ['cal-day', 'sc-day', w === 0 ? 'sun' : '', w === 6 ? 'sat' : '', key === t ? 'today' : '', key === selected ? 'selected' : '', s ? 'has' : ''].join(' ');
     const paw = key === now.date && ['working', 'off', 'before'].includes(now.state) ? `<span class="sc-paw ${now.state}" aria-hidden="true">${pawStampSVG()}</span>` : '';
     html += `<button class="${cls}" data-date="${key}" aria-label="${m + 1}월 ${d}일${s ? `, ${escapeHtml(s.text || '')} ${timeText(s)}` : ''}"><span class="num">${d}</span>${paw}${s
-      ? `<span class="sc-chip">${escapeHtml(s.text || '')}</span>${s.start ? `<span class="sc-hm">${s.start}</span>` : ''}`
+      ? (s.text
+        ? `<span class="sc-chip">${escapeHtml(s.text)}</span>${s.start ? `<span class="sc-hm">${s.start}</span>` : ''}`
+        : `<span class="sc-chip">${s.start || ''}</span>${s.end ? `<span class="sc-hm">~${s.end}</span>` : ''}`)
       : ''}</button>`;
   }
   $('#scDays').innerHTML = html;
 
   const s = schedule[selected];
-  const badge = selected === now.date ? workBadge(now.state) : '';
+  // 누른 날짜마다 지금 시간 기준으로 출근 전 / 출근 중 / 퇴근 발바닥
+  const badge = workBadge(statusAt(selected, s));
   $('#scDetail').innerHTML = `<span class="date">🗓️ ${fmtDay(selected)}</span>${s
-    ? `<div class="sc-line"><p class="sc-text">${escapeHtml(s.text || '')}</p>${badge}</div>
+    ? `<div class="sc-line"><p class="sc-text">${escapeHtml(s.text || '근무')}</p>${badge}</div>
        ${s.start ? `<p class="sc-when">⏰ ${timeText(s)}</p>` : ''}
        <div class="row-actions">
          ${s.imgUrl ? '<button type="button" class="btn sm" data-img>📷 원본 캡처 보기</button>' : ''}
