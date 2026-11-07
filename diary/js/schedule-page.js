@@ -4,7 +4,7 @@
 // - 확인하고 고친 뒤 “달력에 저장”
 // - 휴대폰 시간으로 지금 출근 중인지, 퇴근했는지 발바닥 배지로 보여 줘요
 import { store, dateKey, escapeHtml, toast, askConfirm } from './store.js';
-import { readImage, detectMonth, parseSchedule, workStatus, statusAt } from './schedule.js';
+import { readImage, detectMonth, parseSchedule, workStatus, statusAt, fixSchedule } from './schedule.js';
 import { workBadge, pawStampSVG } from './character.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -19,7 +19,8 @@ let lastOcr = null;
 let rows = [];
 
 const fmtDay = (k) => new Date(`${k}T00:00`).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
-const timeText = (e) => (e?.start ? `${e.start}${e.end ? ` ~ ${e.end}` : ''}` : '');
+const hm24 = (t) => (t === '00:00' ? '24:00' : t); // 자정 퇴근은 24:00 으로
+const timeText = (e) => (e?.start ? `${e.start}${e.end ? ` ~ ${hm24(e.end)}` : ''}` : '');
 
 function knownTimes() {
   try { return JSON.parse(localStorage.getItem(TIMES_KEY) || '{}'); } catch { return {}; }
@@ -197,6 +198,7 @@ function showReview() {
 /** 다시 불러와서 그리기 */
 export async function refresh() {
   [schedule, admin] = await Promise.all([store.getSchedule().catch(() => ({})), store.isAdmin().catch(() => false)]);
+  schedule = fixSchedule(schedule);
   $('#scUpload').hidden = !admin;
   $('#scNote').hidden = admin;
   render();
@@ -222,11 +224,13 @@ function render() {
     const w = (first + d - 1) % 7;
     const s = schedule[key];
     const cls = ['cal-day', 'sc-day', w === 0 ? 'sun' : '', w === 6 ? 'sat' : '', key === t ? 'today' : '', key === selected ? 'selected' : '', s ? 'has' : ''].join(' ');
-    const paw = key === now.date && ['working', 'off', 'before'].includes(now.state) ? `<span class="sc-paw ${now.state}" aria-hidden="true">${pawStampSVG()}</span>` : '';
+    const st = s ? statusAt(key, s) : null;
+    const pawState = key === now.date && now.state ? now.state : st;
+    const paw = ['working', 'off', 'before'].includes(pawState) ? `<span class="sc-paw ${pawState}" aria-hidden="true">${pawStampSVG()}</span>` : '';
     html += `<button class="${cls}" data-date="${key}" aria-label="${m + 1}월 ${d}일${s ? `, ${escapeHtml(s.text || '')} ${timeText(s)}` : ''}"><span class="num">${d}</span>${paw}${s
       ? (s.text
         ? `<span class="sc-chip">${escapeHtml(s.text)}</span>${s.start ? `<span class="sc-hm">${s.start}</span>` : ''}`
-        : `<span class="sc-chip">${s.start || ''}</span>${s.end ? `<span class="sc-hm">~${s.end}</span>` : ''}`)
+        : `<span class="sc-chip">${s.start || ''}</span>${s.end ? `<span class="sc-hm">~${hm24(s.end)}</span>` : ''}`)
       : ''}</button>`;
   }
   $('#scDays').innerHTML = html;

@@ -209,3 +209,25 @@ export function statusAt(date, entry, now = new Date()) {
   if (now < f) return 'working';
   return 'off';
 }
+
+/**
+ * 예전 방식으로 저장된 스케줄 고치기 (화면에 보여 줄 때만, 저장된 값은 그대로)
+ *  - 시간이 글자(text)에 섞여 있으면 꺼내서 출근/퇴근 시간으로
+ *    예) { text: '24:00', start: '14:00' } → { text: '', start: '14:00', end: '00:00' }
+ *        { text: '15:30 정상', start: '06:30' } → { text: '정상', start: '06:30', end: '15:30' }
+ */
+export function fixEntry(e) {
+  if (!e) return e;
+  const text = e.text || '';
+  const times = findTimes(text);
+  if (!times.length || (e.start && e.end)) return e;
+  let start = e.start || null;
+  let end = e.end || null;
+  if (!start) { start = times.shift() || null; }
+  if (!end && times.length) end = times.shift();
+  const rest = text.replace(/(오전|오후|AM|PM|am|pm)?\s*\d{1,2}\s*[:：.]\s*\d{2}(?!\d)|(오전|오후)?\s*\d{1,2}\s*시(\s*\d{1,2}\s*분)?|(?<![\d:.])([01]\d|2[0-3])[0-5]\d(?![\d:])/g, ' ')
+    .replace(/[~\-–/]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return { ...e, text: rest, start, end };
+}
+
+export const fixSchedule = (sc) => Object.fromEntries(Object.entries(sc || {}).map(([k, v]) => [k, fixEntry(v)]));
