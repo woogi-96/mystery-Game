@@ -33,6 +33,10 @@
    `claude/meongmung-diary-website-5qorb9` 로 바꾸고 **Deployments** 에서 **Redeploy**
    (이 브랜치를 main 에 합친 뒤라면 바꿀 필요 없어요)
 
+> ⚠️ Root Directory 나 Production Branch 는 바꾸기만 해서는 사이트에 바로 반영되지 않아요.
+> 바꾼 뒤 **Deployments → 맨 위 배포 ⋯ → Redeploy** 를 하거나, 브랜치에 새 커밋이 올라와야 새 설정으로 다시 올라가요.
+> 주소를 열었을 때 “멍뭉의 꿈 미스터리”(예전 게임)가 보이면 아직 예전 설정으로 올라가 있는 거예요.
+
 이후로는 그 브랜치에 새 커밋이 올라올 때마다 사이트가 자동으로 바뀌어요.
 (Netlify 를 쓰고 싶다면 저장소 맨 위 `netlify.toml` 이 이미 준비돼 있어요.)
 
