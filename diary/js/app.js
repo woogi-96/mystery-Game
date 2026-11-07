@@ -691,6 +691,25 @@ async function initNotifCard() {
 gate().then(() => { syncNative(); initNotifCard().catch(() => {}); }).catch(() => {});
 window.addEventListener('mm-schedule-changed', () => { try { nativeApp?.refresh?.(); } catch { /* 무시 */ } });
 
+/* 맨 아래 “이 기기: 🐶 멍뭉이 / 🐰 우기 · 바꾸기” (아이폰·브라우저에서도 바꿀 수 있게) */
+function paintOwnerLine() {
+  const o = getOwner();
+  $('#ownerLine').hidden = false;
+  $('#ownerName').textContent = o ? `${ICONS[o]} ${NAMES[o]}` : '아직 안 정했어요';
+  $('#ownerChange').textContent = o ? '바꾸기' : '정하기';
+}
+$('#ownerChange').addEventListener('click', async () => {
+  const isMeong = await askConfirm('이 기기는 누구 거예요? 댓글·사진에 이름으로 쓰여요.', '🐶 멍뭉이', '🐰 우기', 'primary');
+  const o = isMeong ? 'meongmung' : 'woogi';
+  setOwner(o);
+  if (nativeApp?.setReminders) nativeApp.setReminders(o === 'meongmung', o === 'meongmung'); // 앱이면 알림도 맞춰요
+  paintOwnerLine();
+  toast(`이 기기를 ${ICONS[o]} ${NAMES[o]} 기기로 정했어요`);
+  if (location.hash === '#today') location.reload();
+});
+gate().then(paintOwnerLine).catch(() => {});
+window.addEventListener('storage', paintOwnerLine);
+
 /* 화면 위 “우기 🐾 출근 중” : 입장한 뒤 1분마다, 앱으로 돌아올 때마다 다시 확인 */
 async function updateHeaderWork() {
   const el = $('#hdrWork');

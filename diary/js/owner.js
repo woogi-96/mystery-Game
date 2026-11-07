@@ -21,10 +21,12 @@ export async function ensureOwner() {
   if (o) return o;
   if (await store.isAdmin().catch(() => false)) {
     setOwner('woogi');
+    window.dispatchEvent(new Event('storage'));
     return 'woogi';
   }
   const isMeong = await askConfirm('이 휴대폰은 누구 거예요? 댓글과 알림에 쓰여요.', '🐶 멍뭉이 휴대폰', '🐰 우기 휴대폰', 'primary');
   o = isMeong ? 'meongmung' : 'woogi';
   setOwner(o);
+  window.dispatchEvent(new Event('storage'));
   return o;
 }

@@ -656,3 +656,6 @@ dialog#lightbox:not([open]) { display: none; }
 .cm-form .btn { flex: none; white-space: nowrap; }
 .app-update { display: block; }
 .app-update .btn { display: inline-flex; margin-top: 8px; }
+.owner-line { font-size: .8rem; }
+.owner-line[hidden] { display: none; }
+.owner-line b { color: var(--ink); }
