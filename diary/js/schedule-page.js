@@ -232,7 +232,7 @@ function render() {
     const w = (first + d - 1) % 7;
     const s = schedule[key];
     const cls = ['cal-day', 'sc-day', w === 0 ? 'sun' : '', w === 6 ? 'sat' : '', key === t ? 'today' : '', key === selected ? 'selected' : '', s ? 'has' : ''].join(' ');
-    const paw = key === now.date && (now.state === 'working' || now.state === 'off') ? `<span class="sc-paw ${now.state}" aria-hidden="true">${pawStampSVG()}</span>` : '';
+    const paw = key === now.date && ['working', 'off', 'before'].includes(now.state) ? `<span class="sc-paw ${now.state}" aria-hidden="true">${pawStampSVG()}</span>` : '';
     html += `<button class="${cls}" data-date="${key}" aria-label="${m + 1}월 ${d}일${s ? `, ${escapeHtml(s.text || '')} ${timeText(s)}` : ''}"><span class="num">${d}</span>${paw}${s
       ? `<span class="sc-chip">${escapeHtml(s.text || '')}</span>${s.start ? `<span class="sc-hm">${s.start}</span>` : ''}`
       : ''}</button>`;

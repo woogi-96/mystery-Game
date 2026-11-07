@@ -282,7 +282,7 @@
 
       <!-- 우기(관리자로 로그인한 기기)에게만 보여요 -->
       <div class="card sc-upload" id="scUpload" hidden>
-        <h3>📷 스케줄 캡처 올리기</h3>
+        <div class="head-row"><h3>📷 스케줄 캡처 올리기</h3><a class="btn sm" href="#admin">🛠️ 관리자</a></div>
         <p class="muted small">① 근무표·캘린더 캡처를 고르고 ② <b>글자 인식하기</b>를 누르면 날짜·근무·시간을 채워 줘요. ③ 확인하고 고친 뒤 저장해요.</p>
         <label class="drop small">
           <input type="file" id="scFile" accept="image/*" />
@@ -356,6 +356,10 @@
     </section>
 
     <section id="adminBox" hidden>
+      <div class="admin-quick">
+        <a class="btn primary block" href="#schedule">🗓️ 우기 스케줄 올리기</a>
+        <a class="btn block" href="#today">📒 멍뭉일지 화면 보기</a>
+      </div>
       <div class="admin-tabs" id="adminTabs">
         <button data-t="diary" class="active">📒 일기 · 도장</button>
         <button data-t="photos">📸 사진</button>

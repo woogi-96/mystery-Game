@@ -28,6 +28,8 @@ export function gate() {
 }
 
 async function run() {
+  // 관리자로 로그인한 기기는 입장 비밀번호 없이 들어와요
+  if (await store.isAdmin?.().catch(() => false)) return;
   let st;
   try { st = await store.lockState(remembered()); } catch { st = { set: false, unsupported: true }; }
   if (st.unsupported || st.remembered) return;

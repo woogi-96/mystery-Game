@@ -575,3 +575,14 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .sc-paw .paw-stamp { width: 20px; height: 20px; display: block; }
 .sc-paw.off { filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
 .sc-paw.off .paw-stamp g { fill: var(--pink); stroke: #e2577a; }
+
+/* 출근 전: 노란 발바닥 도장 */
+.work-badge.before { background: var(--yellow); color: var(--ink); border: 0; box-shadow: 0 3px 0 #e2bd45; }
+.work-badge.before .paw-stamp { filter: none; opacity: 1; }
+.work-badge.before .paw-stamp g { fill: #fff; stroke: #fff3c4; }
+.work-badge.before .paw-stamp path { fill: #e9a83a; }
+.sc-paw.before .paw-stamp g { fill: var(--yellow); stroke: #d9a93a; }
+.sc-paw.before .paw-stamp path { fill: #fff; }
+.admin-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.admin-quick .btn { font-size: .92rem; padding: 10px 8px; }
+.sc-upload .head-row { margin: 0; }

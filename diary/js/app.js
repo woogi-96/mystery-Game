@@ -70,6 +70,41 @@ store.canWrite?.().then((ok) => { if (ok === false) $('#readonlyNote').hidden = 
   };
 })();
 
+/* 새 버전이 올라오면 알아서 새로고침 (앱·홈 화면 앱이 예전 화면에 머무르지 않게)
+   앱으로 돌아올 때와 15분마다, 주요 파일이 바뀌었는지(ETag) 확인해요 */
+(() => {
+  if (store.mode === 'cloud' || !/^https?:$/.test(location.protocol)) return;
+  const WATCH = ['/', '/js/app.js', '/js/store.js', '/js/schedule-page.js', '/css/diary.css'];
+  const fingerprint = async () => {
+    try {
+      const tags = await Promise.all(WATCH.map((u) => fetch(u, { method: 'HEAD', cache: 'no-store' })
+        .then((r) => (r.ok ? r.headers.get('etag') || r.headers.get('last-modified') || '' : ''))));
+      return tags.join('|');
+    } catch { return null; }
+  };
+  let base = null;
+  let lastCheck = 0;
+  let pending = false;
+  // 글을 쓰는 중이거나 창이 열려 있으면 기다렸다가 새로고침
+  const busy = () => document.querySelector('dialog[open]')
+    || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
+    || [...document.querySelectorAll('#diaryInput, #placeName, #placeMemo, #captionInput')].some((i) => i.value.trim())
+    || !document.querySelector('#scReview')?.hidden || !document.querySelector('#scPicked')?.hidden;
+  const check = async (force = false) => {
+    if (!force && Date.now() - lastCheck < 60000) return;
+    lastCheck = Date.now();
+    const fp = await fingerprint();
+    if (!fp) return;
+    if (base === null) { base = fp; return; }
+    if (fp !== base) pending = true;
+    if (pending && !busy()) location.reload();
+  };
+  setTimeout(() => check(true), 3000);
+  setInterval(() => check(true), 15 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) check(true); });
+})();
+
 let scheduleMod = null;
 async function initSchedulePage() {
   scheduleMod = await import('./schedule-page.js');
