@@ -472,3 +472,5 @@ body.admin-mode #toasts { bottom: 20px; }
 .day-h { margin: 14px 0 8px; font-family: 'Jua', sans-serif; font-weight: 400; font-size: .98rem; color: var(--brown); }
 .cal-detail .place-card.compact { background: #fff; }
 .add-place { margin-top: 12px; width: 100%; border: 2px dashed var(--mint); background: rgba(255,255,255,.6); color: var(--mint-dark); border-radius: 14px; padding: 10px; font: inherit; font-weight: 700; cursor: pointer; }
+
+.readonly-note { margin: 12px 16px 0; padding: 10px 14px; border-radius: 14px; background: var(--yellow-soft); color: var(--ink); font-size: .86rem; line-height: 1.5; word-break: keep-all; }

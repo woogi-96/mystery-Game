@@ -50,6 +50,9 @@ $('#modeNote').textContent = store.local
   ? '💾 지금은 이 브라우저에만 저장돼요'
   : '☁️ 멍뭉이와 함께 보는 공용 일지예요';
 
+// 보기 전용으로 공유받았으면 안내를 보여 줘요
+store.canWrite?.().then((ok) => { if (ok === false) $('#readonlyNote').hidden = false; }).catch(() => {});
+
 let adminMod = null;
 async function initAdmin() {
   adminMod = await import('./admin.js');

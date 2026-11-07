@@ -75,7 +75,7 @@ async function cloudBackend() {
   const wrap = async (fn) => {
     try { return await fn(); } catch (e) {
       const code = e?.code;
-      if (code === 'invalid_argument') throw fail('저장 권한이 없어요. 공유받을 때 “참여자(Contributor)” 이상이어야 써요.', 403);
+      if (code === 'invalid_argument') throw fail('저장 권한이 없어요. 주인에게 이메일로 “편집자(Editor)” 초대를 받으면 쓸 수 있어요.', 403);
       if (code === 'quota_exceeded') throw fail('저장 공간이 가득 찼어요. 관리자 메뉴에서 오래된 사진을 지워 주세요.');
       if (code === 'resource_exhausted' || code === 'rate_limited') throw fail('잠깐 너무 바빠요. 조금 뒤에 다시 해 주세요.');
       if (code === 'unavailable' || code === 'store_unavailable') {
@@ -89,11 +89,12 @@ async function cloudBackend() {
     const s = await wrap(() => db.doc(path).get());
     return s.exists ? { ...structuredClone(fallback), ...s.data() } : structuredClone(fallback);
   };
-  const isEditor = async () => (user ? !!(await user.canEdit()) : false);
+  // 관리자 = 이 페이지의 주인(우기님)만. 편집자로 초대받은 사람(멍뭉이)은 쓰기만 하고 관리는 못 해요
+  const isEditor = async () => (user ? !!(await user.isOwner()) : false);
   const uid = user ? await user.id().catch(() => null) : null;
   const lockRef = uid ? db.doc(`data/users/${uid}/lock`) : null;
   const allDocs = async (coll) => (await wrap(() => db.collection(coll).get())).docs;
-  const needEditor = async () => { if (!(await isEditor())) throw fail('편집 권한이 있는 사람만 할 수 있어요', 401); };
+  const needEditor = async () => { if (!(await isEditor())) throw fail('페이지 주인(관리자)만 할 수 있어요', 401); };
 
 
   return {
@@ -124,7 +125,7 @@ async function cloudBackend() {
     },
     uploadPhoto: async (file, caption = '', extra = {}) => {
       const assets = await assetsP;
-      if (!assets) throw fail('사진을 올릴 권한이 없어요. 공유받을 때 “참여자(Contributor)” 이상이어야 해요.', 403);
+      if (!assets) throw fail('사진을 올릴 권한이 없어요. 주인에게 이메일로 “편집자(Editor)” 초대를 받으면 올릴 수 있어요.', 403);
       const img = await normalizeImage(file);
       let up;
       try { up = await assets.upload(img, { type: img.type }); } catch (e) {
@@ -224,8 +225,10 @@ async function cloudBackend() {
       if (kinds.includes('places')) for (const d of await allDocs('places')) await wrap(() => db.collection('places').doc(d.id).delete());
     },
 
-    // 관리자 = claude.ai 에서 이 페이지를 편집할 수 있는 사람 (주인 / 편집자)
+    // 관리자 = 이 페이지의 주인
     usesPassword: false,
+    // 이 사람이 일기·사진을 저장할 수 있는지 (null = 알 수 없음 → 써 보고 판단)
+    canWrite: async () => (user ? await user.can('data.write').catch(() => null) : null),
     isAdmin: isEditor,
     login: async () => { await needEditor(); return true; },
     logout: () => {},
@@ -293,6 +296,7 @@ function supaBackend() {
 
   return {
     mode: 'supa',
+    canWrite: async () => true,
     getProfile: async () => ({ ...structuredClone(DEFAULT_PROFILE), ...(await get('app', 'profile')) }),
     saveProfile: (p) => put('app', 'profile', p).then(() => p),
     getSettings: async () => ({ traitOptions: DEFAULT_TRAITS, ...(await get('app', 'settings')) }),
@@ -401,6 +405,7 @@ async function serverBackend() {
   if (!ok) return null;
   return {
     mode: 'server',
+    canWrite: async () => true,
     getProfile: () => api('profile'),
     saveProfile: (p) => api('profile', { method: 'PUT', body: p }),
     getSettings: () => api('settings'),
@@ -491,6 +496,7 @@ function localBackend() {
 
   return {
     mode: 'local',
+    canWrite: async () => true,
     getProfile: () => kvGet('profile', DEFAULT_PROFILE),
     saveProfile: (p) => kvSet('profile', p).then(() => p),
     getSettings: async () => ({ traitOptions: await kvGet('traitOptions', DEFAULT_TRAITS) }),
