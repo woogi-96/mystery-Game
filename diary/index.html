@@ -147,6 +147,25 @@
         <div class="today-praise" id="todayPraise" hidden></div>
       </div>
 
+      <!-- 안드로이드 앱에서만 보여요 -->
+      <div class="card notif-card" id="notifCard" hidden>
+        <h3>🔔 알림</h3>
+        <label class="switch-row">
+          <span><b>오늘의 멍뭉 알림</b><small>저녁 7시~12시 매 정각, 오늘의 멍뭉을 안 썼으면 “빨리 작성 안하면 우기가 삐져요”</small></span>
+          <input type="checkbox" id="notifDiary" />
+        </label>
+        <label class="switch-row">
+          <span><b>우기 출근·퇴근 알림</b><small>우기 스케줄의 출근·퇴근 시간에 “우기가 출근 했어요 / 퇴근했어요”</small></span>
+          <input type="checkbox" id="notifWork" />
+        </label>
+        <p class="notif-warn" id="notifPerm" hidden>휴대폰 설정에서 멍뭉일지 알림이 꺼져 있어요. <button type="button" class="btn sm" id="notifOpen">알림 켜기</button></p>
+        <div class="btn-row notif-test">
+          <button type="button" class="btn sm" data-test="diary">미리 보기: 일기</button>
+          <button type="button" class="btn sm" data-test="start">출근</button>
+          <button type="button" class="btn sm" data-test="end">퇴근</button>
+        </div>
+      </div>
+
       <div class="stats" id="diaryStats"></div>
 
       <div class="card calendar">

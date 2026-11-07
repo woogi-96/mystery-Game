@@ -611,3 +611,17 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .hdr-work .work-badge { font-size: .85rem; padding: 3px 10px 3px 5px; }
 .hdr-work .work-badge .paw-stamp { width: 20px; height: 20px; }
 body.admin-mode .hdr-work { display: none; }
+
+/* 🔔 앱 알림 설정 */
+.notif-card { display: grid; gap: 10px; }
+.notif-card h3 { margin: 0; }
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 400; color: var(--ink); padding: 10px 12px; border-radius: 14px; background: #fffcf6; cursor: pointer; }
+.switch-row span { display: grid; gap: 2px; min-width: 0; }
+.switch-row b { font-family: 'Jua', sans-serif; font-weight: 400; font-size: 1rem; }
+.switch-row small { color: var(--muted); font-size: .8rem; line-height: 1.4; word-break: keep-all; }
+.switch-row input { appearance: none; -webkit-appearance: none; flex: none; width: 50px; height: 30px; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; transition: background .2s; border: 0; padding: 0; min-height: 0; }
+.switch-row input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .2s; }
+.switch-row input:checked { background: var(--mint); }
+.switch-row input:checked::after { transform: translateX(20px); }
+.notif-warn { margin: 0; padding: 10px 12px; border-radius: 12px; background: #fff0f0; color: #b33a3a; font-size: .85rem; display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.notif-test { justify-content: flex-start; flex-wrap: wrap; }
