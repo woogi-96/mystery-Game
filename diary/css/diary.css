@@ -625,3 +625,8 @@ body.admin-mode .hdr-work { display: none; }
 .switch-row input:checked::after { transform: translateX(20px); }
 .notif-warn { margin: 0; padding: 10px 12px; border-radius: 12px; background: #fff0f0; color: #b33a3a; font-size: .85rem; display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .notif-test { justify-content: flex-start; flex-wrap: wrap; }
+
+.notif-owner { font-size: .8rem; color: var(--muted); }
+.notif-owner b { color: var(--ink); font-weight: 700; }
+.link-btn { border: 0; background: none; color: var(--mint-dark); text-decoration: underline; font: inherit; cursor: pointer; padding: 0 2px; }
+.confirm-dlg .btn-row { flex-wrap: wrap; }

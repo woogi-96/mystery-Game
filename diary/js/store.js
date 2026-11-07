@@ -731,7 +731,7 @@ export function toast(msg, type = 'ok') {
 }
 
 /** confirm() 대신 쓰는 화면 안 확인 창 (claude.ai 페이지에서는 confirm 이 막혀 있어요) */
-export function askConfirm(message, okLabel = '삭제') {
+export function askConfirm(message, okLabel = '삭제', noLabel = '취소', okClass = 'danger') {
   return new Promise((resolve) => {
     let dlg = document.getElementById('confirmDlg');
     if (!dlg) {
@@ -745,6 +745,8 @@ export function askConfirm(message, okLabel = '삭제') {
     const yes = dlg.querySelector('#confirmYes');
     const no = dlg.querySelector('#confirmNo');
     yes.textContent = okLabel;
+    no.textContent = noLabel;
+    yes.className = `btn ${okClass}`;
     // close 이벤트는 늦게 도착해서 다음 확인 창을 닫아 버릴 수 있어요 → Esc(cancel)만 따로 받아요
     const done = (v) => { yes.onclick = no.onclick = dlg.oncancel = null; if (dlg.open) dlg.close(); resolve(v); };
     yes.onclick = () => done(true);

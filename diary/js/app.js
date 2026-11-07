@@ -578,14 +578,28 @@ async function initNotifCard() {
   const read = () => { try { return JSON.parse(nativeApp.getSettings()); } catch { return null; } };
   let st = read();
   if (!st) return;
-  // 처음 한 번: 멍뭉이 휴대폰은 켜고, 관리자(우기) 휴대폰은 꺼 둬요
-  if (!st.set) {
-    const admin = await store.isAdmin().catch(() => false);
-    nativeApp.setReminders(!admin, !admin);
+  // 알림은 멍뭉이 휴대폰에만: 처음 한 번 “이 휴대폰은 누구 거예요?” (관리자로 로그인한 휴대폰은 우기 것)
+  const OWNER = 'mm-device-owner';
+  let owner = null;
+  try { owner = localStorage.getItem(OWNER); } catch { /* 무시 */ }
+  const setOwner = (o) => {
+    owner = o;
+    try { localStorage.setItem(OWNER, o); } catch { /* 무시 */ }
+    nativeApp.setReminders(o === 'meongmung', o === 'meongmung');
     st = read();
+  };
+  const askOwner = async () => {
+    const isMeong = await askConfirm('이 휴대폰은 누구 거예요? 알림은 멍뭉이 휴대폰에만 울려요.', '🐶 멍뭉이 휴대폰', '🐰 우기 휴대폰', 'primary');
+    setOwner(isMeong ? 'meongmung' : 'woogi');
+    toast(isMeong ? '멍뭉이 휴대폰으로 정했어요. 알림을 켰어요 🔔' : '우기 휴대폰으로 정했어요. 알림은 꺼 둘게요');
+  };
+  if (!owner) {
+    if (await store.isAdmin().catch(() => false)) setOwner('woogi');
+    else await askOwner();
   }
   const paint = () => {
     st = read() || st;
+    $('#notifOwner').textContent = owner === 'meongmung' ? '🐶 멍뭉이 휴대폰' : '🐰 우기 휴대폰';
     $('#notifDiary').checked = st.diary;
     $('#notifWork').checked = st.work;
     $('#notifPerm').hidden = st.permission || !(st.diary || st.work);
@@ -596,6 +610,7 @@ async function initNotifCard() {
   $('#notifDiary').addEventListener('change', save);
   $('#notifWork').addEventListener('change', save);
   $('#notifOpen').addEventListener('click', () => nativeApp.openNotificationSettings());
+  $('#notifOwnerChange').addEventListener('click', async () => { await askOwner(); paint(); });
   card.querySelector('.notif-test').addEventListener('click', (e) => {
     const b = e.target.closest('[data-test]');
     if (b) nativeApp.test(b.dataset.test);
