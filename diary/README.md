@@ -77,7 +77,7 @@
 
 ## 실행 방법
 
-> 📱 **로그인 없이 휴대폰 브라우저로 열기**: [SETUP-ONLINE.md](SETUP-ONLINE.md) (Netlify + Supabase, 무료)
+> 📱 **로그인 없이 휴대폰 브라우저로 열기**: [SETUP-ONLINE.md](SETUP-ONLINE.md) (Vercel + Supabase, 무료)
 
 ### 0) claude.ai 페이지 (휴대폰에서 바로)
 

@@ -1,6 +1,6 @@
 # 멍뭉일지를 로그인 없이 휴대폰 브라우저로 열기
 
-사이트는 **Netlify**(무료)에, 일기·사진은 **Supabase**(무료)에 둬요.
+사이트는 **Vercel**(무료)에, 일기·사진은 **Supabase**(무료)에 둬요.
 주소만 열면 바로 들어오고, 모든 데이터는 입장 비밀번호 4자리가 있어야 볼 수 있어요.
 
 ## 1. Supabase (저장소) — 약 5분
@@ -18,19 +18,23 @@
    - **anon public** 키 또는 **publishable** 키 (`eyJ…` 또는 `sb_publishable_…`)
    - ⚠️ `service_role` / `secret` 키는 절대 알려 주지도, 넣지도 마세요.
 
-## 2. Netlify (사이트) — 약 3분
+## 2. Vercel (사이트) — 약 3분
 
-1. https://app.netlify.com 에서 GitHub 계정으로 가입
-2. **Add new site → Import an existing project → GitHub** → `woogi-96/mystery-Game` 선택
-   (처음이면 Netlify 가 저장소에 접근하도록 허용해 주세요)
-3. 설정
-   - Branch to deploy: `claude/meongmung-diary-website-5qorb9`
-   - 나머지는 비워 두세요 (`netlify.toml` 이 알아서 `diary` 폴더를 올려요)
-4. **Deploy** → 끝나면 `xxxx.netlify.app` 주소가 생겨요
-5. **Site configuration → Change site name** 에서 `meongmung-diary` 처럼 바꾸면
-   주소가 `https://meongmung-diary.netlify.app` 가 돼요
+1. https://vercel.com/signup 에서 **Continue with GitHub** 로 가입 (Hobby, 무료)
+2. **Add New… → Project** → `woogi-96/mystery-Game` 옆 **Import**
+   (목록에 없으면 **Adjust GitHub App Permissions** 에서 이 저장소를 허용해 주세요)
+3. 설정 화면에서
+   - **Project Name**: `meongmung-diary` → 주소가 `https://meongmung-diary.vercel.app` 가 돼요
+   - **Framework Preset**: `Other`
+   - **Root Directory**: **Edit** 를 눌러 `diary` 선택  ← 꼭!
+   - Build and Output Settings 는 건드리지 않아요
+4. **Deploy** → 끝나면 주소가 생겨요
+5. 지금 작업 브랜치에 올리려면: 프로젝트 **Settings → Git → Production Branch** 를
+   `claude/meongmung-diary-website-5qorb9` 로 바꾸고 **Deployments** 에서 **Redeploy**
+   (이 브랜치를 main 에 합친 뒤라면 바꿀 필요 없어요)
 
-이후로는 이 브랜치에 새 커밋이 올라올 때마다 사이트가 자동으로 바뀌어요.
+이후로는 그 브랜치에 새 커밋이 올라올 때마다 사이트가 자동으로 바뀌어요.
+(Netlify 를 쓰고 싶다면 저장소 맨 위 `netlify.toml` 이 이미 준비돼 있어요.)
 
 ## 3. 처음 열 때 순서 (중요)
 

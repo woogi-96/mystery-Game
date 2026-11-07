@@ -1,0 +1,7 @@
+# 사이트에 올리지 않는 파일 (서버용, 설정 스크립트, 안내 문서)
+server.js
+package.json
+supabase/
+data/
+README.md
+SETUP-ONLINE.md
