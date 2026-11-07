@@ -40,7 +40,7 @@ function loadAll() {
   $('#adminMode').textContent = {
     cloud: '지금은 claude.ai 공용 저장소를 써요. 이 페이지를 공유받은 사람끼리 같은 일기와 사진을 봐요. 관리는 이 페이지의 주인만 할 수 있고, 편집자로 초대받은 사람은 일기·사진·장소를 쓸 수만 있어요.',
     supa: '지금은 Supabase 저장소를 써요. 로그인 없이 주소만 열면 들어오고, 모든 데이터는 입장 비밀번호가 있어야 볼 수 있어요. 관리자 비밀번호는 처음 로그인할 때 쓴 비밀번호예요.',
-    server: '지금은 서버 저장 방식이에요. 모든 데이터가 서버의 diary/data 폴더에 저장돼요.',
+    server: '지금은 서버 저장 방식이에요. 모든 데이터가 서버의 data 폴더에 저장돼요.',
     local: '지금은 이 브라우저에만 저장하는 방식이에요. (기본 비밀번호: meongmung)',
   }[store.mode];
 }
@@ -102,6 +102,24 @@ let inited = false;
 export function init() {
   if (inited) return;
   inited = true;
+
+  $('#forgotAdmin').addEventListener('click', () => {
+    const r = store.adminReset;
+    const f = $('#resetAdminForm');
+    f.hidden = !f.hidden;
+    $('#resetAdminHelp').textContent = r?.help || '관리자 비밀번호를 다시 정할 수 없는 방식이에요.';
+    $('#resetAdminFields').hidden = r?.how !== 'pin';
+  });
+  $('#resetAdminForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await store.adminReset.run($('#resetPin').value, $('#resetNewPw').value);
+      $('#resetPin').value = $('#resetNewPw').value = '';
+      $('#resetAdminForm').hidden = true;
+      toast('새 관리자 비밀번호로 바꿨어요 🔐');
+      show();
+    } catch (err) { toast(err.message, 'err'); }
+  });
 
   $('#loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();

@@ -375,6 +375,10 @@ function supaBackend() {
     },
     logout: () => setAdminKey(''),
     changePassword: (next) => rpc('mm_admin_password', { p_token: adminKey(), p_new: next }),
+    adminReset: {
+      how: 'help',
+      help: 'Supabase 대시보드 → SQL Editor 에서  delete from mm_secret where k = \'admin\';  을 실행한 뒤, 이 화면에서 새 비밀번호로 로그인하면 그게 새 관리자 비밀번호가 돼요.',
+    },
     exportAll: async () => {
       const [profile, settings, diary, stamps, places, photos] = await Promise.all([
         get('app', 'profile'), get('app', 'settings'), list('diary'), list('stamps'), list('places'), list('photos')]);
@@ -451,6 +455,10 @@ async function serverBackend() {
     },
     logout: () => setAdminKey(''),
     changePassword: async (next) => { await api('admin/password', { method: 'PUT', body: { password: next }, admin: true }); setAdminKey(next); },
+    adminReset: {
+      how: 'help',
+      help: '서버를 RESET_PASSWORD=1 ADMIN_PASSWORD=새비밀번호 npm start 로 한 번 다시 켜면 새 비밀번호로 바뀌어요.',
+    },
     exportAll: () => api('export', { admin: true }),
   };
 }
@@ -590,6 +598,19 @@ function localBackend() {
     },
     logout: () => setAdminKey(''),
     changePassword: async (next) => { await check(); await kvSet('adminPassword', next); setAdminKey(next); },
+    // 이 브라우저에만 저장하는 방식: 데이터가 이 기기에만 있으니 입장 비밀번호를 아는 사람이 주인이에요
+    adminReset: {
+      how: 'pin',
+      help: '입장 비밀번호 4자리를 넣으면 새 관리자 비밀번호를 정할 수 있어요.',
+      run: async (pin, next) => {
+        if (String(next || '').length < 4) throw fail('새 비밀번호는 4자 이상이어야 해요');
+        const l = await kvGet('lock', null);
+        if (!l) throw fail('아직 입장 비밀번호가 없어요. 처음 비밀번호는 meongmung 이에요.');
+        if ((await sha256(`${l.salt}:${pin}`)) !== l.hash) throw fail('입장 비밀번호가 달라요', 401);
+        await kvSet('adminPassword', next);
+        setAdminKey(next);
+      },
+    },
     exportAll: async () => {
       await check();
       return {

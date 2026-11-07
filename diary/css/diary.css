@@ -474,3 +474,9 @@ body.admin-mode #toasts { bottom: 20px; }
 .add-place { margin-top: 12px; width: 100%; border: 2px dashed var(--mint); background: rgba(255,255,255,.6); color: var(--mint-dark); border-radius: 14px; padding: 10px; font: inherit; font-weight: 700; cursor: pointer; }
 
 .readonly-note { margin: 12px 16px 0; padding: 10px 14px; border-radius: 14px; background: var(--yellow-soft); color: var(--ink); font-size: .86rem; line-height: 1.5; word-break: keep-all; }
+
+.admin-login .lock-forgot { margin-top: 12px; }
+.reset-admin { display: grid; gap: 8px; margin-top: 10px; text-align: left; }
+.reset-admin #resetAdminFields { display: grid; gap: 8px; }
+.reset-admin #resetAdminFields[hidden] { display: none; }
+.reset-admin p { margin: 0; word-break: keep-all; }
