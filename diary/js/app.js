@@ -4,6 +4,7 @@ import { statusAt, fixSchedule, workStatus } from './schedule.js';
 import { gate, isUnlocked, setLockVisible } from './lock.js';
 import { SUPABASE } from './config.js';
 import { getOwner, setOwner, ensureOwner, NAMES, ICONS } from './owner.js';
+import { pingOthers } from './realtime.js';
 import { initPlaces, placeCard, photoDay, render as renderPlaces } from './places.js';
 import { GREETINGS, timePhase } from './greeting.js';
 import { computeGrowth, LEVELS, REWARDS, TIPS } from './growth.js';
@@ -414,6 +415,7 @@ $('#cmForm').addEventListener('submit', async (e) => {
     const c = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), by, text: text.slice(0, 200), at: new Date().toISOString() };
     const next = await store.updatePhoto(lbPhoto.id, (d) => ({ ...d, comments: [...(d.comments || []), c].slice(-100) }));
     $('#cmInput').value = '';
+    pingOthers('comment', by);
     applyComments(lbPhoto.id, next.comments || []);
     renderComments();
   } catch (err) { showError(err); } finally { btn.disabled = false; }
@@ -501,7 +503,7 @@ async function initTogether() {
     input.value = '';
     $('#captionInput').value = '';
     setFiles([]);
-    if (ok) toast(`사진 ${ok}장을 올렸어요 📸`);
+    if (ok) { toast(`사진 ${ok}장을 올렸어요 📸`); pingOthers('photo', getOwner()); }
     renderGallery();
     renderPlaces().catch(() => {});
   });
@@ -665,6 +667,7 @@ async function initNotifCard() {
     $('#notifSocialRow').hidden = st.social === undefined; // 1.2 앱부터
     $('#notifSocial').checked = st.social !== false;
     $('#notifPerm').hidden = st.permission || !(st.diary || st.work || st.social);
+    $('#notifBattery').hidden = st.battery !== false || !st.social;
   };
   paint();
   card.hidden = false;
@@ -681,6 +684,7 @@ async function initNotifCard() {
   $('#notifWork').addEventListener('change', save);
   $('#notifSocial').addEventListener('change', () => { nativeApp.setSocial?.($('#notifSocial').checked); setTimeout(paint, 1500); toast('알림 설정을 저장했어요 🔔'); });
   $('#notifOpen').addEventListener('click', () => nativeApp.openNotificationSettings());
+  $('#notifBatteryBtn').addEventListener('click', () => nativeApp.ignoreBattery?.());
   $('#notifOwnerChange').addEventListener('click', async () => { await askOwner(); paint(); });
   card.querySelector('.notif-test').addEventListener('click', (e) => {
     const b = e.target.closest('[data-test]');
