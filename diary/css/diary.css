@@ -480,3 +480,18 @@ body.admin-mode #toasts { bottom: 20px; }
 .reset-admin #resetAdminFields { display: grid; gap: 8px; }
 .reset-admin #resetAdminFields[hidden] { display: none; }
 .reset-admin p { margin: 0; word-break: keep-all; }
+
+.admin-login .keep { display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 400; color: var(--muted); font-size: .88rem; }
+.admin-login .keep input { width: 18px; height: 18px; margin: 0; accent-color: var(--mint-dark); }
+
+.install-tip { display: flex; gap: 8px; align-items: flex-start; margin: 12px 16px 0; padding: 10px 12px; border-radius: 14px; background: var(--mint-soft); color: var(--ink); font-size: .84rem; line-height: 1.5; word-break: keep-all; }
+.install-tip[hidden] { display: none; }
+.install-tip button { flex: none; border: 0; background: none; color: var(--muted); font-size: 1rem; cursor: pointer; padding: 0 2px; }
+body.locked .install-tip { visibility: hidden; }
+
+/* 날짜 칸이 잘리지 않게: 좁은 휴대폰(갤럭시 S25+ 등)에서는 날짜와 장소 이름을 한 줄씩 */
+.place-form .two { grid-template-columns: 1fr; }
+input[type="date"] { min-width: 0; min-height: 48px; -webkit-appearance: none; appearance: none; text-align: left; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.upload-row .inline { flex-wrap: wrap; white-space: normal; }
+.upload-row .inline input[type="date"] { flex: 1; min-width: 160px; }
